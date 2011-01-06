@@ -18,7 +18,7 @@ bool is_allowed(image_read_info<gdal_tag> const& info,
     return true;
 }
 
-template< typename View >
+template<typename View>
 bool is_allowed(image_read_info<gdal_tag> const& info,
     mpl::false_  // is read_and_convert
     )
