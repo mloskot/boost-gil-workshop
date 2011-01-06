@@ -12,7 +12,6 @@ extern "C" {
 }
 
 #include "detail/base.hpp"
-#include "formats/tiff/log.hpp"
 
 namespace boost { namespace gil {
 

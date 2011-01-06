@@ -9,9 +9,9 @@ namespace bgil = boost::gil;
 int main()
 {
 
-    std::string filename( "image.tif" );
+    std::string filename("image.tif");
     bgil::rgb8_image_t img;
-    bgil::read_image(filename, img, gdal_tag() );
+    bgil::read_image(filename, img, bgil::gdal_tag());
 
     return 0;
 }
