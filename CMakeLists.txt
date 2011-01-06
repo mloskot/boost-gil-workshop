@@ -1,12 +1,21 @@
 cmake_minimum_required(VERSION 2.8)
 project(boost-gil-extension)
 
+# Additional CMake modules
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Boost is required
 find_package(Boost 1.44 REQUIRED)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
+endif() 
+
+# GDAL is required
+find_package(GDAL 1.6)
+if(GDAL_FOUND)
+  include_directories(${GDAL_INCLUDE_DIR})
 endif() 
 
 # Location of the Boost.GIL headers
