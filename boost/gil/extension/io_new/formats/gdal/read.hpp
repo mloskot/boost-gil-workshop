@@ -16,7 +16,7 @@
 #include <boost/gil/extension/io_new/detail/typedefs.hpp>
 
 // TODO: GDAL lives in its own repo, uses gil/extension/io/ path
-#include <boost/gil/extension/io/gdal_tags.hpp>
+#include <boost/gil/extension/io_new/gdal_tags.hpp>
 
 #include "is_allowed.hpp"
 
