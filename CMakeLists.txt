@@ -40,7 +40,7 @@ file(GLOB GIL_EXT_IO_FORMATS_TARGA_HPP "${GIL_EXT_IO_DIR}/formats/targa/*.hpp")
 file(GLOB GIL_EXT_IO_FORMATS_TIFF_HPP "${GIL_EXT_IO_DIR}/formats/tiff/*.hpp")
 
 # GIL - GDAL
-set(GDAL_GIL_EXT_IO_DIR ${CMAKE_CURRENT_SOURCE_DIR}/gil/extension/io)
+set(GDAL_GIL_EXT_IO_DIR ${CMAKE_CURRENT_SOURCE_DIR}/gil/extension/io_new)
 file(GLOB GIL_EXT_IO_GDAL_HPP "${GDAL_GIL_EXT_IO_DIR}/*.hpp")
 file(GLOB GIL_EXT_IO_FORMATS_GDAL_HPP "${GDAL_GIL_EXT_IO_DIR}/formats/gdal/*.hpp")
 #list(APPEND GIL_EXT_IO_HPP ${GIL_EXT_IO_GDAL_HPP})

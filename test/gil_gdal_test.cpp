@@ -2,7 +2,7 @@
 #include <cassert>
 
 #include <boost/gil/gil_all.hpp>
-#include <gil/extension/io/gdal_read.hpp>
+#include <boost/gil/extension/io_new/gdal_read.hpp>
 
 namespace bgil = boost::gil;
 

@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/663/trunk/gil_2/boost/gil/extension/io_new/formats/jpeg
+END
+supported_types.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svn/!svn/ver/540/trunk/gil_2/boost/gil/extension/io_new/formats/jpeg/supported_types.hpp
+END
+base.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/627/trunk/gil_2/boost/gil/extension/io_new/formats/jpeg/base.hpp
+END
+write.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/654/trunk/gil_2/boost/gil/extension/io_new/formats/jpeg/write.hpp
+END
+read.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/663/trunk/gil_2/boost/gil/extension/io_new/formats/jpeg/read.hpp
+END
+is_allowed.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/!svn/ver/627/trunk/gil_2/boost/gil/extension/io_new/formats/jpeg/is_allowed.hpp
+END
