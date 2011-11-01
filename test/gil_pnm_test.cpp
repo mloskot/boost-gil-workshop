@@ -12,7 +12,7 @@ namespace bgil = boost::gil;
 int main()
 {
     std::string fname("G:\\dev\\boost\\_git\\boost-gil-extension\\images\\sample.pgm");
-    bgil::image_read_info<bgil::pnm_tag> info = bgil::read_image_info(fname, bgil::pnm_tag()); 
+    bgil::image_read_info<bgil::pnm_tag> info = bgil::read_image_info(fname, bgil::pnm_tag());
  
     bgil::gray8_image_t img;
     bgil::read_image(fname, img, bgil::pnm_tag()); 
