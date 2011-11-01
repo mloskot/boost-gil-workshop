@@ -23,27 +23,41 @@ if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-# Location of the Boost.GIL headers
+message(STATUS "Using Boost headers from ${Boost_INCLUDE_DIR}")
+
 set(GIL_DIR ${Boost_INCLUDE_DIR}/boost/gil)
-# Location of the Boost.GIL IOv2 headers
-set(GIL_EXT_IO_DIR ${GIL_DIR}/extension/io_new)
+message(STATUS "Using Boost.GIL headers from ${Boost_INCLUDE_DIR}/boost/gil")
+
+set(GIL_EXT_DIR ${CMAKE_SOURCE_DIR}/boost/gil/extension)
+message(STATUS "Using Boost.GIL extensions headers from ${GIL_EXT_DIR}")
+
+set(GIL_EXT_IO_DIR ${GIL_EXT_DIR}/io_new)
+set(GIL_EXT_TOOLBOX_DIR ${GIL_EXT_DIR}/toolbox)
 
 # GIL headers
 file(GLOB GIL_HPP "${GIL_DIR}/*.hpp")
+file(GLOB GIL_EXT_TOOLBOX_HPP "${GIL_EXT_TOOLBOX_DIR}/*.hpp")
 file(GLOB GIL_EXT_IO_HPP "${GIL_EXT_IO_DIR}/*.hpp")
 file(GLOB GIL_EXT_IO_DETAIL_HPP "${GIL_EXT_IO_DIR}/detail/*.hpp")
 file(GLOB GIL_EXT_IO_FORMATS_BMP_HPP "${GIL_EXT_IO_DIR}/formats/bmp/*.hpp")
+file(GLOB GIL_EXT_IO_FORMATS_GDAL_HPP "${GDAL_GIL_EXT_IO_DIR}/formats/gdal/*.hpp")
 file(GLOB GIL_EXT_IO_FORMATS_JPEG_HPP "${GIL_EXT_IO_DIR}/formats/jpeg/*.hpp")
 file(GLOB GIL_EXT_IO_FORMATS_PNG_HPP "${GIL_EXT_IO_DIR}/formats/png/*.hpp")
 file(GLOB GIL_EXT_IO_FORMATS_PNM_HPP "${GIL_EXT_IO_DIR}/formats/pnm/*.hpp")
 file(GLOB GIL_EXT_IO_FORMATS_TARGA_HPP "${GIL_EXT_IO_DIR}/formats/targa/*.hpp")
 file(GLOB GIL_EXT_IO_FORMATS_TIFF_HPP "${GIL_EXT_IO_DIR}/formats/tiff/*.hpp")
 
-# GIL - GDAL
-set(GDAL_GIL_EXT_IO_DIR ${CMAKE_CURRENT_SOURCE_DIR}/gil/extension/io_new)
-file(GLOB GIL_EXT_IO_GDAL_HPP "${GDAL_GIL_EXT_IO_DIR}/*.hpp")
-file(GLOB GIL_EXT_IO_FORMATS_GDAL_HPP "${GDAL_GIL_EXT_IO_DIR}/formats/gdal/*.hpp")
-#list(APPEND GIL_EXT_IO_HPP ${GIL_EXT_IO_GDAL_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_EXT_TOOLBOX_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_EXT_IO_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_EXT_IO_DETAIL_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_EXT_IO_FORMATS_BMP_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_EXT_IO_FORMATS_GDAL_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_EXT_IO_FORMATS_JPEG_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_EXT_IO_FORMATS_PNG_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_EXT_IO_FORMATS_PNM_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_EXT_IO_FORMATS_TARGA_HPP})
+list(APPEND GIL_ALL_HPP ${GIL_EXT_IO_FORMATS_TIFF_HPP})
 
 # Configure test programs, also adds the collected headers
 add_subdirectory(test)
