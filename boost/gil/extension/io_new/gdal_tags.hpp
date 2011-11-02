@@ -46,34 +46,34 @@ template<>
 struct image_read_info<gdal_tag>
 {
     image_read_info()
-        : width_(gdal_dimension::type())
-        , height_(gdal_dimension::type())
-        , bits_per_channel_(gdal_dimension::type())
-        , channels_per_pixel_(gdal_dimension::type())
-        , block_width_(gdal_dimension::type())
-        , block_height_(gdal_dimension::type())
+        : width(gdal_dimension::type())
+        , height(gdal_dimension::type())
+        , bits_per_channel(gdal_dimension::type())
+        , channels_per_pixel(gdal_dimension::type())
+        , block_width(gdal_dimension::type())
+        , block_height(gdal_dimension::type())
     {}
 
     /// Number of rows of pixels in the image.
-    gdal_dimension::type width_;
+    gdal_dimension::type width;
 
     /// Number of columns in the image, i.e., the number of pixels per row.
-    gdal_dimension::type height_;
+    gdal_dimension::type height;
 
     /// Number of bits per each color component (channel).
     /// @todo What is heterogeneous channels?
-    gdal_dimension::type bits_per_channel_;
+    gdal_dimension::type bits_per_channel;
 
     /// Number of separate channels (color planes) in the image.
-    gdal_dimension::type channels_per_pixel_;
+    gdal_dimension::type channels_per_pixel;
 
     /// Number of rows of pixels in the natural block.
     /// The natural block is most efficient unit of image access for the underlying format.
     /// For many formats this is simple a whole scanline (1 x width_).
-    gdal_dimension::type block_width_;
+    gdal_dimension::type block_width;
 
     /// Number of columns of pixels in the natural block.
-    gdal_dimension::type block_height_;
+    gdal_dimension::type block_height;
 };
 
 /// Read settings for images accessed through GDAL.
@@ -83,7 +83,9 @@ template<>
 struct image_write_info<gdal_tag>
 {
     /// Default constructor
-    image_write_info() {}
+    image_write_info()
+    {
+    }
 
     // TODO
 };

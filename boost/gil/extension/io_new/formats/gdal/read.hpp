@@ -35,19 +35,19 @@ public:
     image_read_info<gdal_tag> get_info()
     {
         image_read_info<gdal_tag> info;
-        info.width_ = io_device_.get_width();
-        info.height_ = io_device_.get_height();
-        info.bits_per_channel_ = io_device_.get_bits_per_channel();
-        info.channels_per_pixel_ = io_device_.get_channels_per_pixel();
+        info.width = io_device_.get_width();
+        info.height = io_device_.get_height();
+        info.bits_per_channel = io_device_.get_bits_per_channel();
+        info.channels_per_pixel = io_device_.get_channels_per_pixel();
         
         std::pair<int, int> block_size = io_device_.get_block_size();
-        info.block_width_ = block_size.first;
-        info.block_height_ = block_size.second;
+        info.block_width = block_size.first;
+        info.block_height = block_size.second;
         
         return info;
     }
 
-    template< typename View >
+    template<typename View>
     void apply(View& dst_view)
     {
     }
@@ -55,7 +55,7 @@ public:
 protected:
 
     Device& io_device_;
-    image_read_info<gdal_tag> info_;
+    image_read_info<gdal_tag> info_; // TODO: what for?
 };
 
 struct gdal_read_is_supported
@@ -80,8 +80,6 @@ public:
     template<typename Images>
     void apply(any_image<Images>& images)
     {
-        //gdal_type_format_checker format_checker(this->info_);
-
         // TODO        
     }
 };

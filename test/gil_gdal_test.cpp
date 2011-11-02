@@ -9,15 +9,17 @@ int main(int argc, char** argv)
 {
     try
     {
-        if (argc < 2)
-            throw std::invalid_argument("missing dataset");
-    
-        ::GDALAllRegister();
-
-        std::string fname(argv[1]);
+        std::string fname;
+        if (argc > 1)
+            fname = argv[1];
+        else
+        {
+            fname = "/home/mloskot/data/gdal/utm.tif";
+        }
+  
         bgil::image_read_info<bgil::gdal_tag> info = bgil::read_image_info(fname, bgil::gdal_tag());
 
-        std::cout << info.width_ << " x " << info.height_ << std::endl;
+        std::cout << info.width << " x " << info.height << std::endl;
 
     }
     catch (std::ios_base::failure const& e)
