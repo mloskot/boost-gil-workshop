@@ -18,11 +18,9 @@ namespace boost { namespace gil { namespace detail {
 
 class gdal_device_base
 {
-protected:
-    
+public:
     typedef ::boost::shared_ptr<GDALDataset> gdal_ds_type;
 
-public:
     gdal_device_base() {}
     gdal_device_base(GDALDataset* gdal_ds) : gdal_ds_(gdal_ds, ::GDALClose) {}
     gdal_device_base(gdal_ds_type gdal_ds) : gdal_ds_(gdal_ds) {}
@@ -118,10 +116,13 @@ struct file_stream_device<gdal_tag> : public gdal_device_base
 
     static gdal_ds_type open(std::string const& name, ::GDALAccess access)
     {
+            
+        GDALAllRegister(); // TODO: find better place to call it once only
+
         gdal_ds_type gdal_ds(static_cast<GDALDataset*>(
             ::GDALOpen(name.c_str(), access)), gdal_ds_deleter());
 
-        gdal_io_error_if_last(gdal_ds.get());
+        gdal_io_error_if_last(0 != gdal_ds.get());
         return gdal_ds;
     }
 
