@@ -18,8 +18,10 @@ int main()
     bgil::read_image(fname, img, bgil::pnm_tag()); 
 
     unsigned cnt(0);
-    auto vimg = bgil::view(img);
-    for (auto it = vimg.begin(); it != vimg.end(); ++it)
+    bgil::gray8_image_t::view_t vimg(bgil::view(img));
+    
+vimg.begin();    
+    //for (auto it = vimg.begin(); it != vimg.end(); ++it)
     {
         ++cnt;
     }

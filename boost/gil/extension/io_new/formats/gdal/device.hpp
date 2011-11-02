@@ -20,45 +20,83 @@ class gdal_device_base
 {
 protected:
     
-    typedef shared_ptr<::GDALDataset> gdal_ds_type;
+    typedef ::boost::shared_ptr<GDALDataset> gdal_ds_type;
 
 public:
     gdal_device_base() {}
     gdal_device_base(GDALDataset* gdal_ds) : gdal_ds_(gdal_ds, ::GDALClose) {}
     gdal_device_base(gdal_ds_type gdal_ds) : gdal_ds_(gdal_ds) {}
 
-    std::size_t get_width() const
+    int get_width() const
     {
-        return std::size_t(gdal_ds_->GetRasterXSize());
+        return gdal_ds_->GetRasterXSize();
     }
 
-    std::size_t get_height() const
+    int get_height() const
     {
-        return std::size_t(gdal_ds_->GetRasterYSize());
+        return gdal_ds_->GetRasterYSize();
     }
 
-    std::size_t get_num_channels() const
+    int get_bits_per_channel() const
     {
-        return std::size_t(gdal_ds_->GetRasterCount());
+        // Read bits depth of first channel, assume homogeneous channels
+
+        // GDAL indexes bands from 1
+        GDALDataType band_type = get_band(1).GetRasterDataType();
+        assert(GDT_Unknown != band_type);
+        return GDALGetDataTypeSize(band_type);
+    }
+    
+    int get_channels_per_pixel() const
+    {
+        return gdal_ds_->GetRasterCount();
+    }
+
+    std::pair<int, int> get_block_size() const
+    {
+        // Read bits depth of first channel, assume homogeneous channels
+        std::pair<int, int> size;
+        get_band(1).GetBlockSize(&size.first, &size.second);
+        return size;
     }
 
 protected:
     gdal_ds_type gdal_ds_;
+    
+    GDALRasterBand& get_band(int index) const
+    {
+        // GDAL indexes bands from 1
+        GDALRasterBand* band = gdal_ds_->GetRasterBand(index);
+        io_error_if(!band, "band access failure");
+        return *band;
+    }
 
 }; // gdal_device_base
 
 // TODO: gdal_io_error type
 void gdal_io_error_if_last(bool expr)
 {
-    if (expr && CE_None != ::CPLGetLastErrorType())
+    if (!expr && CE_None != CPLGetLastErrorType())
     {
-        char const* msg = ::CPLGetLastErrorMsg();
+        char const* msg = CPLGetLastErrorMsg();
         std::ostringstream oss;
-        oss << " [" << ::CPLGetLastErrorNo() << "] " << (msg ? msg : "unknown");
+        oss << " [" << CPLGetLastErrorNo() << "] " << (msg ? msg : "unknown");
 
         io_error(oss.str().c_str());
     }
 }
+
+struct gdal_ds_deleter
+{
+    void operator()(GDALDataset* gdal_ds)
+    {
+        if (gdal_ds)
+        {
+            ::GDALClose(gdal_ds);
+            gdal_ds = 0;
+        }
+    }
+};
 
 template<>
 struct file_stream_device<gdal_tag> : public gdal_device_base
@@ -80,10 +118,10 @@ struct file_stream_device<gdal_tag> : public gdal_device_base
 
     static gdal_ds_type open(std::string const& name, ::GDALAccess access)
     {
-        gdal_ds_type gdal_ds(static_cast<::GDALDataset*>(
-            ::GDALOpen(name.c_str(), access)), ::GDALClose);
+        gdal_ds_type gdal_ds(static_cast<GDALDataset*>(
+            ::GDALOpen(name.c_str(), access)), gdal_ds_deleter());
 
-        gdal_io_error_if_last(gdal_ds);
+        gdal_io_error_if_last(gdal_ds.get());
         return gdal_ds;
     }
 

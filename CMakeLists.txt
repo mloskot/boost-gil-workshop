@@ -10,7 +10,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Boost 1.44 REQUIRED)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
-  include_directories(${Boost_INCLUDE_DIRS}/boost/gil/extension/io_new)
 endif() 
 
 # GDAL is required

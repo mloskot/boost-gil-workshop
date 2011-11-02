@@ -1,10 +1,10 @@
 add_executable(gil_pnm_test
-  gil_pnm_test.cpp
-  ${GIL_ALL_HPP})
+    gil_pnm_test.cpp)
 
 add_executable(gil_gdal_test
-  gil_gdal_test.cpp
-  ${GIL_ALL_HPP})
+    gil_gdal_test.cpp)
+
+target_link_libraries(gil_gdal_test ${GDAL_LIBRARY})
 
 # Help IDE users to find Boost.GIL headers
 source_group("Header Files\\gil" FILES ${GIL_HPP})

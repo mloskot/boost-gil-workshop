@@ -35,7 +35,15 @@ public:
     image_read_info<gdal_tag> get_info()
     {
         image_read_info<gdal_tag> info;
-
+        info.width_ = io_device_.get_width();
+        info.height_ = io_device_.get_height();
+        info.bits_per_channel_ = io_device_.get_bits_per_channel();
+        info.channels_per_pixel_ = io_device_.get_channels_per_pixel();
+        
+        std::pair<int, int> block_size = io_device_.get_block_size();
+        info.block_width_ = block_size.first;
+        info.block_height_ = block_size.second;
+        
         return info;
     }
 
@@ -74,7 +82,7 @@ public:
     {
         //gdal_type_format_checker format_checker(this->info_);
 
-        TODO        
+        // TODO        
     }
 };
 

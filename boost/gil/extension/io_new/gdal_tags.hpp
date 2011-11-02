@@ -7,10 +7,6 @@
 #ifndef BOOST_GIL_EXTENSION_IO_GDAL_TAGS_HPP
 #define BOOST_GIL_EXTENSION_IO_GDAL_TAGS_HPP
 
-extern "C" {
-    #include <gdal.h> // or rather C++ API?
-}
-
 #include "detail/base.hpp"
 
 namespace boost { namespace gil {
@@ -20,17 +16,9 @@ struct gdal_tag : format_tag {};
 
 /// For a description see: http://www.gdal.org
 
-/// Defines type for image width property.
-struct gdal_image_width : property_base<int> {};
-
-/// Defines type for image height property.
-struct gdal_image_height : property_base<int> {};
-
-/// Defines type for bits per sample property.
-struct gdal_bits_per_sample : property_base<int> {};
-
-/// Defines type for samples per pixel property.
-struct gdal_samples_per_pixel : property_base<int> {};
+/// Defines type to store image (or block of image) dimension property.
+/// Image dimension is width, height, bits depth, number of channels, etc.
+struct gdal_dimension : property_base<int> {};
 
 /// Read settings for images accessed through GDAL.
 ///
@@ -57,26 +45,35 @@ struct image_read_settings<gdal_tag> : public image_read_settings_base
 template<>
 struct image_read_info<gdal_tag>
 {
-    typedef int dimension_type;
-
     image_read_info()
-        : width_(gdal_image_width::type())
-        , height_(gdal_image_height::type())
-        , bits_per_sample_(gdal_bits_per_sample::type())
-        , samples_per_pixel_(gdal_samples_per_pixel::type())
+        : width_(gdal_dimension::type())
+        , height_(gdal_dimension::type())
+        , bits_per_channel_(gdal_dimension::type())
+        , channels_per_pixel_(gdal_dimension::type())
+        , block_width_(gdal_dimension::type())
+        , block_height_(gdal_dimension::type())
     {}
 
-    /// The number of rows of pixels in the image.
-    gdal_image_height::type width_;
+    /// Number of rows of pixels in the image.
+    gdal_dimension::type width_;
 
-    /// The number of columns in the image, i.e., the number of pixels per row.
-    gdal_image_height::type height_;
+    /// Number of columns in the image, i.e., the number of pixels per row.
+    gdal_dimension::type height_;
 
-    /// Size of image sample.
-    gdal_bits_per_sample::type bits_per_sample_;
+    /// Number of bits per each color component (channel).
+    /// @todo What is heterogeneous channels?
+    gdal_dimension::type bits_per_channel_;
 
-    /// Size of image pixel.
-    gdal_samples_per_pixel::type samples_per_pixel_;
+    /// Number of separate channels (color planes) in the image.
+    gdal_dimension::type channels_per_pixel_;
+
+    /// Number of rows of pixels in the natural block.
+    /// The natural block is most efficient unit of image access for the underlying format.
+    /// For many formats this is simple a whole scanline (1 x width_).
+    gdal_dimension::type block_width_;
+
+    /// Number of columns of pixels in the natural block.
+    gdal_dimension::type block_height_;
 };
 
 /// Read settings for images accessed through GDAL.
