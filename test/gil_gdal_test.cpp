@@ -12,9 +12,13 @@ int main(int argc, char** argv)
         if (argc < 2)
             throw std::invalid_argument("missing dataset");
     
-        GDALOpen(argv[1], GA_ReadOnly);
+        ::GDALAllRegister();
+
         std::string fname(argv[1]);
-        //bgil::image_read_info<bgil::gdal_tag> info = bgil::read_image_info(fname, bgil::gdal_tag());
+        bgil::image_read_info<bgil::gdal_tag> info = bgil::read_image_info(fname, bgil::gdal_tag());
+
+        std::cout << info.width_ << " x " << info.height_ << std::endl;
+
     }
     catch (std::ios_base::failure const& e)
     {

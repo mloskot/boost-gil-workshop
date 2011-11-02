@@ -1,8 +1,10 @@
 add_executable(gil_pnm_test
-    gil_pnm_test.cpp)
+    gil_pnm_test.cpp
+	${GIL_ALL_HPP})
 
 add_executable(gil_gdal_test
-    gil_gdal_test.cpp)
+    gil_gdal_test.cpp
+	${GIL_ALL_HPP})
 
 target_link_libraries(gil_gdal_test ${GDAL_LIBRARY})
 
