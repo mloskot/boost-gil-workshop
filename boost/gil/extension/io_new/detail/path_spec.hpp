@@ -28,7 +28,6 @@
 #ifdef BOOST_GIL_IO_ADD_FS_PATH_SUPPORT
 #define BOOST_FILESYSTEM_VERSION 3
 #include <boost/filesystem/path.hpp>
-#include <boost/filesystem/operations.hpp>
 #endif // BOOST_GIL_IO_ADD_FS_PATH_SUPPORT
 
 namespace boost{ namespace gil{ namespace detail{

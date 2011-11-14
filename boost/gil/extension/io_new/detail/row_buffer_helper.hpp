@@ -56,10 +56,67 @@ private:
 
 template<typename Pixel >
 struct row_buffer_helper< Pixel
+                        , typename enable_if< typename is_bit_aligned< Pixel >::type >::type
+                        >
+{
+    typedef byte_t element_t;
+    typedef std::vector< element_t > buffer_t;
+    typedef Pixel pixel_type;
+    typedef bit_aligned_pixel_iterator<pixel_type> iterator_t;
+
+    row_buffer_helper( std::size_t width
+                     , bool        in_bytes
+                     )
+    : _c( ( width 
+          * pixel_bit_size< pixel_type >::value
+          )
+          >> 3 
+        )
+
+    , _r( width
+          * pixel_bit_size< pixel_type >::value
+        - ( _c << 3 )
+       )
+    {
+        if( in_bytes )
+        {
+            _row_buffer.resize( width );
+        }
+        else
+        {
+            // add one byte if there are remaining bits
+            _row_buffer.resize( _c + ( _r!=0 ));
+        }
+    }
+
+    element_t* data() { return &_row_buffer[0]; }
+
+    iterator_t begin() { return iterator_t( &_row_buffer.front(),0 ); }
+    iterator_t end()   { return _r == 0 ? iterator_t( &_row_buffer.back() + 1,  0 )
+                                        : iterator_t( &_row_buffer.back()    , (int) _r );
+                       }
+
+    buffer_t& buffer() { return _row_buffer; }
+
+private:
+
+    // For instance 25 pixels of rgb2 type would be:
+    // overall 25 pixels * 3 channels * 2 bits/channel = 150 bits
+    // c = 18 bytes
+    // r = 6 bits
+
+    std::size_t _c; // number of full bytes
+    std::size_t _r; // number of remaining bits
+
+    buffer_t _row_buffer;
+};
+
+template<typename Pixel >
+struct row_buffer_helper< Pixel
                         , typename enable_if< typename mpl::and_< typename is_bit_aligned< Pixel >::type
                                                                 , typename is_homogeneous< Pixel >::type
                                                                 >::type
-                                            >::type
+                                            >
                         >
 {
     typedef byte_t element_t;
