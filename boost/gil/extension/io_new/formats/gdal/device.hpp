@@ -16,6 +16,19 @@
 
 namespace boost { namespace gil { namespace detail {
 
+// TODO: gdal_io_error type
+void gdal_io_error_if_last(bool expr)
+{
+    if (!expr && CE_None != CPLGetLastErrorType())
+    {
+        char const* msg = CPLGetLastErrorMsg();
+        std::ostringstream oss;
+        oss << " [" << CPLGetLastErrorNo() << "] " << (msg ? msg : "unknown");
+
+        io_error(oss.str().c_str());
+    }
+}
+
 class gdal_device_base
 {
 public:
@@ -57,6 +70,25 @@ public:
         get_band(1).GetBlockSize(&size.first, &size.second);
         return size;
     }
+    
+    template< typename Buffer>
+    void read_scanline(Buffer& buffer, std::ptrdiff_t row)
+    {
+        int const width = get_width();
+        read(buffer, 0, row, width, 1);
+    }
+    
+    template< typename Buffer>
+    void read(Buffer& buffer, std::ptrdiff_t col, std::ptrdiff_t row, std::ptrdiff_t width, std::ptrdiff_t height)
+    {
+        int c = static_cast<int>(col);
+        int r = static_cast<int>(row);
+        int w = static_cast<int>(width);
+        int h = static_cast<int>(height);
+        void* buf = static_cast<void*>(&buffer.front());
+        CPLErr const err = gdal_ds_->RasterIO(GF_Read, c, r, w, h, buf, w, h, GDT_Byte, 1, 0, 0, 0, 0);
+        gdal_io_error_if_last(err != CE_None);
+    }
 
 protected:
     gdal_ds_type gdal_ds_;
@@ -70,19 +102,6 @@ protected:
     }
 
 }; // gdal_device_base
-
-// TODO: gdal_io_error type
-void gdal_io_error_if_last(bool expr)
-{
-    if (!expr && CE_None != CPLGetLastErrorType())
-    {
-        char const* msg = CPLGetLastErrorMsg();
-        std::ostringstream oss;
-        oss << " [" << CPLGetLastErrorNo() << "] " << (msg ? msg : "unknown");
-
-        io_error(oss.str().c_str());
-    }
-}
 
 struct gdal_ds_deleter
 {

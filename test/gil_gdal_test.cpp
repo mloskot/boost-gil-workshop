@@ -1,6 +1,8 @@
 #include <exception>
 #include <iostream>
 #include <string>
+#include <boost/fusion/adapted/struct/adapt_struct.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/gil/gil_all.hpp>
 #include <boost/gil/extension/io_new/gdal_all.hpp>
 namespace bgil = boost::gil;
@@ -9,16 +11,24 @@ int main(int argc, char** argv)
 {
     try
     {
-        if (argc < 2)
-            throw std::invalid_argument("missing dataset");
+        std::string fname;
+        if (argc > 1)
+            fname = argv[1];
+        else
+        {
+            fname = "/home/mloskot/data/gdal/utm.tif";
+        }
+  
+        typedef bgil::gdal_tag fmt_tag;
+        bgil::image_read_info<fmt_tag> info = bgil::read_image_info(fname, fmt_tag());
+        std::cout << info._width << " x " << info._height << std::endl;
+
+        bgil::gray8_image_t img;
+        bgil::read_image(fname, img, fmt_tag()); 
     
-        ::GDALAllRegister();
-
-        std::string fname(argv[1]);
-        bgil::image_read_info<bgil::gdal_tag> info = bgil::read_image_info(fname, bgil::gdal_tag());
-
-        std::cout << info.width_ << " x " << info.height_ << std::endl;
-
+        unsigned cnt(0);
+        bgil::gray8_image_t::view_t vimg(bgil::view(img));
+    
     }
     catch (std::ios_base::failure const& e)
     {
