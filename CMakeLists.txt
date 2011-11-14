@@ -12,7 +12,8 @@ if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
 endif() 
 
-# GDAL is required
+find_package(TIFF)
+
 find_package(GDAL 1.6)
 if(GDAL_FOUND)
   include_directories(${GDAL_INCLUDE_DIR})
