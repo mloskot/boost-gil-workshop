@@ -3,8 +3,10 @@ add_executable(gil_pnm_test gil_pnm_test.cpp ${GIL_ALL_HPP})
 add_executable(gil_gdal_test gil_gdal_test.cpp ${GIL_ALL_HPP})
 target_link_libraries(gil_gdal_test ${GDAL_LIBRARY})
 
+add_executable(gil_gdal_histogram gil_gdal_histogram.cpp ${GIL_ALL_HPP})
+target_link_libraries(gil_gdal_histogram ${GDAL_LIBRARY})
+
 if (TIFF_FOUND)
-include_directories(${TIFF_INCLUDE_DIR})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   include_directories(${TIFF_INCLUDE_DIR})
   add_executable(gil_tiff_test gil_tiff_test.cpp tif_stream.cxx ${GIL_ALL_HPP})
