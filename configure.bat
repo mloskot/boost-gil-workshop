@@ -5,7 +5,7 @@ set BUILD_TYPE=Debug
 set BUILD=D:\dev\boost\gil\_git\build-%BRANCH%
 set SRC=D:\dev\boost\gil\_git\boost-gil-workshop
 set BOOST=D:\dev\boost\_svn\trunk
-set OSGEO4W=D:\OSGeo4W
+set OSGEO4W=C:\OSGeo4W
 REM set TIFF=D:\src\tiff-4.0.0beta7
 set G="Visual Studio 11"
 REM ### CONFIGURATION END   ###
