@@ -1,20 +1,23 @@
-@ECHO OFF
-REM *** YOUR CONFIGURATION ***
-set GIL_GDAL_TEST_BUILD_DIR="..\build"
-set BOOST=G:\dev\boost\_svn\trunk
+@echo off
+REM ### CONFIGURATION BEGIN ###
+set BRANCH=master
+set BUILD_TYPE=Debug
+set BUILD=D:\dev\boost\gil\_git\build-%BRANCH%
+set SRC=D:\dev\boost\gil\_git\boost-gil-workshop
+set BOOST=D:\dev\boost\_svn\trunk
 set OSGEO4W=D:\OSGeo4W
-set TIFF=G:\src\tiff-4.0.0beta7
-REM ********************************
-
-set PATH=%OSGEO4W_ROOT%\apps\gdal-dev\bin;%OSGEO4W%\bin;%PATH%
-set GDAL_DATA=%OSGEO4W%\apps\gdal-dev\share\gdal
-
-set GIL_GDAL_TEST_DIR=%CD%
-cd %GIL_GDAL_TEST_BUILD_DIR%
-cmake ^
+REM set TIFF=D:\src\tiff-4.0.0beta7
+set G="Visual Studio 11"
+REM ### CONFIGURATION END   ###
+IF NOT EXIST %BUILD% mkdir %BUILD%
+IF EXIST %BRANCH%.sln del /Q /F %BRANCH%.sln
+echo Configuring build for %BRANCH% in %BUILD%
+cd %SRC% & ^
+git checkout -q %BRANCH% & ^
+cd %BUILD% & ^
+cmake -G %G% ^
     -DBOOST_ROOT=%BOOST% ^
     -DOSGEO4W_ROOT=%OSGEO4W% ^
-	-DTIFF_INCLUDE_DIR=%TIFF%\libtiff ^
-	-DTIFF_LIBRARY=%TIFF%\libtiff\libtiff.lib ^
-    %GIL_GDAL_TEST_DIR%
-cd %GIL_GDAL_TEST_DIR%
+    -DTIFF_INCLUDE_DIR=%OSGEO4W%\include ^
+    -DTIFF_LIBRARY=%OSGEO4W%\lib\libtiff_i.lib ^
+    %SRC%

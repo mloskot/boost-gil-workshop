@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(boost-gil-extension)
+project(boost-gil-workshop)
 
 # Additional CMake modules
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})

@@ -16,7 +16,8 @@ int main(int argc, char** argv)
             fname = argv[1];
         else
         {
-            fname = "/home/mloskot/data/gdal/utm.tif";
+            // XXX: Change if needed
+            fname = "D:\\dev\\gdal\\_svn\\trunk\\autotest\\gdrivers\\data\\utm.tif";
         }
   
         typedef bgil::gdal_tag fmt_tag;
