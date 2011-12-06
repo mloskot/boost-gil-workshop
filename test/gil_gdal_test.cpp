@@ -22,7 +22,7 @@ int main(int argc, char** argv)
   
         typedef bgil::gdal_tag fmt_tag;
         bgil::image_read_info<fmt_tag> info = bgil::read_image_info(fname, fmt_tag());
-        std::cout << info._width << " x " << info._height << std::endl;
+        std::cout << info.width_ << " x " << info.height_ << std::endl;
 
         bgil::gray8_image_t img;
         bgil::read_image(fname, img, fmt_tag()); 

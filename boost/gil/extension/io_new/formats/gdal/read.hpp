@@ -45,8 +45,8 @@ public:
 
     image_read_info<gdal_tag> get_info()
     {
-        info_._width = io_device_.get_width();
-        info_._height = io_device_.get_height();
+        info_.width_ = io_device_.get_width();
+        info_.height_ = io_device_.get_height();
         info_.bits_per_channel = io_device_.get_bits_per_channel();
         info_.channels_per_pixel = io_device_.get_channels_per_pixel();
 

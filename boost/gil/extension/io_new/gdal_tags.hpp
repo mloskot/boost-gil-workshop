@@ -46,8 +46,8 @@ template<>
 struct image_read_info<gdal_tag>
 {
     image_read_info()
-        : _width(gdal_dimension::type())
-        , _height(gdal_dimension::type())
+        : width_(gdal_dimension::type())
+        , height_(gdal_dimension::type())
         , bits_per_channel(gdal_dimension::type())
         , channels_per_pixel(gdal_dimension::type())
         , block_width(gdal_dimension::type())
@@ -55,10 +55,10 @@ struct image_read_info<gdal_tag>
     {}
 
     /// Number of rows of pixels in the image.
-    gdal_dimension::type _width;
+    gdal_dimension::type width_;
 
     /// Number of columns in the image, i.e., the number of pixels per row.
-    gdal_dimension::type _height;
+    gdal_dimension::type height_;
 
     /// Number of bits per each color component (channel).
     /// @todo What is heterogeneous channels?
