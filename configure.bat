@@ -1,14 +1,13 @@
 @echo off
 REM ### CONFIGURATION BEGIN ###
-set PROJECT=boost-gil-workshop
 set BRANCH=master
 set BUILD_TYPE=Debug
-set BUILD=G:\dev\boost\gil\_git\build-%BRANCH%
-set SRC=G:\dev\boost\gil\_git\%PROJECT%
-set BOOST=G:\dev\boost\_svn\trunk
-set OSGEO4W=D:\OSGeo4W
+set BUILD=D:\dev\boost\gil\_git\build-%BRANCH%
+set SRC=D:\dev\boost\gil\_git\boost-gil-workshop
+set BOOST=D:\dev\boost\_svn\trunk
+set OSGEO4W=C:\OSGeo4W
 REM set TIFF=D:\src\tiff-4.0.0beta7
-set G="Visual Studio 10"
+set G="Visual Studio 11"
 REM ### CONFIGURATION END   ###
 IF NOT EXIST %BUILD% mkdir %BUILD%
 IF EXIST %BRANCH%.sln del /Q /F %BRANCH%.sln
