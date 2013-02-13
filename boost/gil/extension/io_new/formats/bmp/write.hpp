@@ -1,5 +1,5 @@
 /*
-    Copyright 2008 Christian Henning
+    Copyright 2012 Christian Henning
     Use, modification and distribution are subject to the Boost Software License,
     Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
     http://www.boost.org/LICENSE_1_0.txt).
@@ -15,7 +15,7 @@
 /// \brief
 /// \author Christian Henning \n
 ///
-/// \date 2008 \n
+/// \date 2012 \n
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -26,28 +26,54 @@
 
 #include <boost/gil/extension/io_new/bmp_tags.hpp>
 
-namespace boost { namespace gil { namespace detail {
+#include "writer_backend.hpp"
+
+namespace boost { namespace gil {
+
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400) 
+#pragma warning(push) 
+#pragma warning(disable:4512) //assignment operator could not be generated 
+#endif
+
+namespace detail {
+
+struct bmp_write_is_supported
+{
+    template< typename View >
+    struct apply
+        : public is_write_supported< typename get_pixel_type< View >::type
+                                   , bmp_tag
+                                   >
+    {};
+};
 
 template < int N > struct get_bgr_cs {};
 template <> struct get_bgr_cs< 1 > { typedef gray8_view_t type; };
-template <> struct get_bgr_cs< 3 > { typedef bgr8_view_t type; };
+template <> struct get_bgr_cs< 3 > { typedef bgr8_view_t type;  };
 template <> struct get_bgr_cs< 4 > { typedef bgra8_view_t type; };
 
+} // namespace detail
+
+///
+/// BMP Writer
+///
 template< typename Device >
 class writer< Device
             , bmp_tag
             >
+    : public writer_backend< Device
+                           , bmp_tag
+                           >
 {
 public:
 
-    writer( Device& file )
-    : _out( file )
-    {
-    }
-
-    ~writer()
-    {
-    }
+    writer( const Device&                      io_dev
+          , const image_write_info< bmp_tag >& info 
+          )
+    : backend_t( io_dev
+                    , info
+                    )
+    {}
 
     template<typename View>
     void apply( const View& view )
@@ -55,17 +81,9 @@ public:
         write( view );
     }
 
-    template<typename View>
-    void apply( const View&                           view
-              , const image_write_info< bmp_tag >& /* info */
-              )
-    {
-        // Add code here, once image_write_info< bmp_tag > isn't empty anymore.
-
-        write( view );
-    }
-
 private:
+
+    typedef writer_backend< Device, bmp_tag > backend_t;
 
     template< typename View >
     void write( const View& view )
@@ -105,27 +123,27 @@ private:
         std::size_t siz = ofs + spn * view.height();
 
         // write the BMP file header
-        _out.write_uint16( bmp_signature );
-        _out.write_uint32( (uint32_t) siz );
-        _out.write_uint16( 0 );
-        _out.write_uint16( 0 );
-        _out.write_uint32( (uint32_t) ofs );
+        this->_io_dev.write_uint16( bmp_signature );
+        this->_io_dev.write_uint32( (uint32_t) siz );
+        this->_io_dev.write_uint16( 0 );
+        this->_io_dev.write_uint16( 0 );
+        this->_io_dev.write_uint32( (uint32_t) ofs );
 
         // writes Windows information header
-        _out.write_uint32( bmp_header_size::_win32_info_size );
-        _out.write_uint32( static_cast< uint32_t >( view.width()  ));
-        _out.write_uint32( static_cast< uint32_t >( view.height() ));
-        _out.write_uint16( 1 );
-        _out.write_uint16( static_cast< uint16_t >( bpp ));
-        _out.write_uint32( bmp_compression::_rgb );
-        _out.write_uint32( 0 );
-        _out.write_uint32( 0 );
-        _out.write_uint32( 0 );
-        _out.write_uint32( entries );
-        _out.write_uint32( 0 );
+        this->_io_dev.write_uint32( bmp_header_size::_win32_info_size );
+        this->_io_dev.write_uint32( static_cast< uint32_t >( view.width()  ));
+        this->_io_dev.write_uint32( static_cast< uint32_t >( view.height() ));
+        this->_io_dev.write_uint16( 1 );
+        this->_io_dev.write_uint16( static_cast< uint16_t >( bpp ));
+        this->_io_dev.write_uint32( bmp_compression::_rgb );
+        this->_io_dev.write_uint32( 0 );
+        this->_io_dev.write_uint32( 0 );
+        this->_io_dev.write_uint32( 0 );
+        this->_io_dev.write_uint32( entries );
+        this->_io_dev.write_uint32( 0 );
 
         write_image< View
-                   , typename get_bgr_cs< num_channels< View >::value >::type
+                   , typename detail::get_bgr_cs< num_channels< View >::value >::type
                    >( view, spn );
     }
 
@@ -158,27 +176,15 @@ private:
                        , row
                        );
 
-            _out.write( &buffer.front(), spn );
+            this->_io_dev.write( &buffer.front(), spn );
         }
 
     }
-
-private:
-
-    Device& _out;
 };
 
-
-struct bmp_write_is_supported
-{
-    template< typename View >
-    struct apply
-        : public is_write_supported< typename get_pixel_type< View >::type
-                                   , bmp_tag
-                                   >
-    {};
-};
-
+///
+/// BMP Dynamic Image Writer
+///
 template< typename Device >
 class dynamic_image_writer< Device
                           , bmp_tag
@@ -193,22 +199,31 @@ class dynamic_image_writer< Device
 
 public:
 
-    dynamic_image_writer( Device& file )
-    : parent_t( file )
+    dynamic_image_writer( const Device&                      io_dev
+                        , const image_write_info< bmp_tag >& info
+                        )
+    : parent_t( io_dev
+              , info
+              )
     {}
 
     template< typename Views >
     void apply( const any_image_view< Views >& views )
     {
-        dynamic_io_fnobj< bmp_write_is_supported
-                        , parent_t
-                        > op( this );
+        detail::dynamic_io_fnobj< detail::bmp_write_is_supported
+                                , parent_t
+                                > op( this );
 
-        apply_operation( views, op );
+        apply_operation( views
+                       , op
+                       );
     }
 };
 
-} // detail
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400) 
+#pragma warning(pop) 
+#endif 
+
 } // gil
 } // boost
 

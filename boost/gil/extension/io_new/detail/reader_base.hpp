@@ -21,7 +21,7 @@
 
 #include "base.hpp"
 
-namespace boost { namespace gil { namespace detail {
+namespace boost { namespace gil { 
 
 /// Reader Base Class
 /// 
@@ -38,6 +38,20 @@ struct reader_base
 {
 public:
 
+    ///
+    /// Default Constructor
+    ///
+    reader_base()
+    :_cc_policy()
+    {}
+
+    ///
+    /// Constructor
+    ///
+    reader_base( const ConversionPolicy& cc )
+    :_cc_policy( cc )
+    {}
+
     /// Initializes an image. But also does some check ups.
     ///
     /// @tparam Image Image which implements boost::gil's ImageConcept.
@@ -45,95 +59,76 @@ public:
     /// @param img  The image.
     /// @param info The image read info.
     template< typename Image >
-    void init_image( Image&                              img
-                   , const image_read_info< FormatTag >& info
+    void init_image( Image&                                  img
+                   , const image_read_settings< FormatTag >& settings
                    )
     {
-        _info = info;
+        //setup( backend._settings._dim );
 
-        setup( _settings._dim );
+        assert( settings._dim.x && settings._dim.y );
 
-        img.recreate( _settings._dim.x
-                    , _settings._dim.y
+        img.recreate( settings._dim.x
+                    , settings._dim.y
                     );
     }
 
     template< typename View >
-    void init_view( const View&                         view
-                  , const image_read_info< FormatTag >& info
+    void init_view( const View&                             view
+                  , const image_read_settings< FormatTag >&
                   )
     {
-        _info = info;
-
         setup( view.dimensions() );
     }
 
-protected:
-
-    reader_base( const image_read_settings< FormatTag >& settings )
-    : _settings( settings )
-    {}
-    reader_base( const typename ConversionPolicy::color_converter_type& cc
-               , const image_read_settings< FormatTag >&                settings
-               )
-    : _settings( settings )
-    , _cc_policy( cc )
-    {}
-
 private:
 
-    void setup( const point_t& dim )
+    void setup( const point_t& /* dim */ )
     {
-        check_coordinates( dim );
+        //check_coordinates( dim );
 
-        if( dim == point_t( 0, 0 ))
-        {
-            _settings._dim.x = _info._width;
-            _settings._dim.y = _info._height;
-        }
-        else
-        {
-            _settings._dim = dim;
-        }
+        //if( dim == point_t( 0, 0 ))
+        //{
+        //    _settings._dim.x = _info._width;
+        //    _settings._dim.y = _info._height;
+        //}
+        //else
+        //{
+        //    _settings._dim = dim;
+        //}
     }
 
-    void check_coordinates( const point_t& dim )
+    void check_coordinates( const point_t& /* dim */ )
     {
-       typedef point_t::value_type int_t;
+       //typedef point_t::value_type int_t;
 
-       int_t width  = static_cast< int_t >( _info._width  );
-       int_t height = static_cast< int_t >( _info._height );
+       //int_t width  = static_cast< int_t >( _info._width  );
+       //int_t height = static_cast< int_t >( _info._height );
 
-       io_error_if( (  _settings._top_left.x < 0
-                    || _settings._top_left.y < 0
-                    || dim.x < 0
-                    || dim.y < 0
-                    )
-                 , "User provided view has incorrect size." );
+       //io_error_if( (  _settings._top_left.x < 0
+       //             || _settings._top_left.y < 0
+       //             || dim.x < 0
+       //             || dim.y < 0
+       //             )
+       //          , "User provided view has incorrect size." );
 
 
-       io_error_if( (  ( width  ) <  _settings._top_left.x
-                    && ( width  ) <= dim.x
-                    && ( height ) <  _settings._top_left.y
-                    && ( height ) <= dim.y  )
-                 , "User provided view has incorrect size."       );
+       //io_error_if( (  ( width  ) <  _settings._top_left.x
+       //             && ( width  ) <= dim.x
+       //             && ( height ) <  _settings._top_left.y
+       //             && ( height ) <= dim.y  )
+       //          , "User provided view has incorrect size."       );
 
-       io_error_if( (  ( _settings._top_left.x + dim.x ) > width
-                    || ( _settings._top_left.y + dim.y ) > height
-                   )
-                 , "User provided view has incorrect size." );
-
+       //io_error_if( (  ( _settings._top_left.x + dim.x ) > width
+       //             || ( _settings._top_left.y + dim.y ) > height
+       //            )
+       //          , "User provided view has incorrect size." );
     }
 
 protected:
-
-    image_read_settings< FormatTag > _settings;
-    image_read_info< FormatTag >     _info;
 
     ConversionPolicy _cc_policy;
 };
 
-} // namespace detail
 } // namespace gil
 } // namespace boost
 

@@ -27,30 +27,79 @@ namespace boost { namespace gil { namespace detail {
 
 typedef std::vector< tiff_bits_per_sample::type > channel_sizes_t;
 
-template< typename Channel >
-int format_value( mpl::true_ ) // is_bit_aligned
-{
-    return SAMPLEFORMAT_UINT;
-}
+template< typename View, typename Channel, typename Enable = void > struct Format_Type {};
 
-template< typename Channel >
-int format_value( mpl::false_ ) // is_bit_aligned
+// is_bit_aligned< View >
+template< typename View, typename Channel > struct Format_Type< View
+                                                              , Channel
+                                                              , typename boost::enable_if< typename is_bit_aligned< typename get_pixel_type< View >::type >::type >::type
+                                                              >
 {
-    if( is_unsigned< Channel >::value )
-    {
-        return SAMPLEFORMAT_UINT;
-    }
-    if( is_signed< Channel >::value )
-    {
-        return SAMPLEFORMAT_INT;
-    }
-    else if( is_floating_point< Channel >::value )
-    {
-        return SAMPLEFORMAT_IEEEFP;
-    }
+    static const int value = SAMPLEFORMAT_UINT;
+};
 
-    io_error( "Unkown channel format." );
-}
+// is_not_bit_aligned< View > && is_unsigned< Channel >
+template< typename View, typename Channel > struct Format_Type< View
+                                                              , Channel
+                                                              , typename boost::enable_if< mpl::and_< mpl::not_< typename is_bit_aligned< typename get_pixel_type< View >::type >::type >
+                                                                                                    , is_unsigned< Channel > 
+                                                                                                    >
+                                                                                         >::type
+                                                              >
+{
+    static const int value = SAMPLEFORMAT_UINT;
+};
+
+// is_not_bit_aligned< View > && is_signed< Channel >
+template< typename View, typename Channel > struct Format_Type< View
+                                                              , Channel
+                                                              , typename boost::enable_if< mpl::and_< mpl::not_< typename is_bit_aligned< typename get_pixel_type< View >::type >::type >
+                                                                                                    , is_signed< Channel > 
+                                                                                                    >
+                                                                                         >::type
+                                                              >
+{
+    static const int value = SAMPLEFORMAT_INT;
+};
+
+// is_not_bit_aligned< View > && is_floating_point< Channel >
+template< typename View, typename Channel > struct Format_Type< View
+                                                              , Channel
+                                                              , typename boost::enable_if< mpl::and_< mpl::not_< typename is_bit_aligned< typename get_pixel_type< View >::type >::type >
+                                                                                                    , is_floating_point< Channel > 
+                                                                                                    >
+                                                                                         >::type
+                                                              >
+{
+    static const int value = SAMPLEFORMAT_IEEEFP;
+};
+
+//template< typename Channel >
+//int format_value( mpl::true_ ) // is_bit_aligned
+//{
+//    return SAMPLEFORMAT_UINT;
+//}
+//
+//template< typename Channel >
+//int format_value( mpl::false_ ) // is_bit_aligned
+//{
+//    if( is_unsigned< Channel >::value )
+//    {
+//        return SAMPLEFORMAT_UINT;
+//    }
+//
+//    if( is_signed< Channel >::value )
+//    {
+//        return SAMPLEFORMAT_INT;
+//    }
+//
+//    else if( is_floating_point< Channel >::value )
+//    {
+//        return SAMPLEFORMAT_IEEEFP;
+//    }
+//
+//    io_error( "Unkown channel format." );
+//}
 
 // The following two functions look the same but are different since one is using
 // a pixel_t as template parameter whereas the other is using reference_t.
@@ -148,7 +197,10 @@ bool is_allowed( const image_read_info< tiff_tag >& info
     typedef typename num_channels< pixel_t >::value_type num_channel_t;
 
     const num_channel_t dst_samples_per_pixel = num_channels< pixel_t >::value;
-    const num_channel_t dst_sample_format     = format_value< channel_t >( typename is_bit_aligned< pixel_t >::type() );
+
+    //const num_channel_t dst_sample_format     = format_value< channel_t >( typename is_bit_aligned< pixel_t >::type() );
+    const num_channel_t dst_sample_format     = Format_Type<View, channel_t>::value;
+
 
     return (  dst_samples_per_pixel == info._samples_per_pixel
            && compare_channel_sizes< View >( channel_sizes

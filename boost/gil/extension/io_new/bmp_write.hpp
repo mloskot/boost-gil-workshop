@@ -23,6 +23,9 @@
 #include "formats/bmp/supported_types.hpp"
 #include "formats/bmp/write.hpp"
 
+#include "detail/make_writer.hpp"
+#include "detail/make_dynamic_image_writer.hpp"
+
 #include "detail/write_view.hpp"
 
 #endif // BOOST_GIL_EXTENSION_IO_BMP_WRITE_HPP

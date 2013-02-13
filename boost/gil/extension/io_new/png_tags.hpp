@@ -19,17 +19,15 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef BOOST_GIL_IO_PNG_FLOATING_POINT_SUPPORTED
+#ifdef BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED
+# error "Cannot set both symbols"
+#endif BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED
+#endif BOOST_GIL_IO_PNG_FLOATING_POINT_SUPPORTED
+
 // taken from jpegxx - https://bitbucket.org/edd/jpegxx/src/ea2492a1a4a6/src/ijg_headers.hpp
 #ifndef BOOST_GIL_EXTENSION_IO_PNG_C_LIB_COMPILED_AS_CPLUSPLUS
     extern "C" {
-#else
-    // DONT_USE_EXTERN_C introduced in v7 of the IJG library.
-    // By default the v7 IJG headers check for __cplusplus being defined and
-    // wrap the content in an 'extern "C"' block if it's present.
-    // When DONT_USE_EXTERN_C is defined, this wrapping is not performed.
-    #ifndef DONT_USE_EXTERN_C
-        #define DONT_USE_EXTERN_C 1
-    #endif
 #endif
 
 #include <png.h>
@@ -98,8 +96,13 @@ struct png_num_channels : property_base< png_byte > {};
     /// Defines type for physical scale unit property.
     struct png_unit  : property_base< int > {};
 
+#ifdef BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED
+    /// Defines type for physical scale property.
+    struct png_scale : property_base< png_fixed_point > {};
+#else
     /// Defines type for physical scale property.
     struct png_scale : property_base< std::string > {};
+#endif // BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED
 
 #endif // BOOST_GIL_IO_PNG_FLOATING_POINT_SUPPORTED
 
@@ -228,8 +231,6 @@ struct png_info_base
     , _file_gamma      ( 1 )
 #endif // BOOST_GIL_IO_PNG_FLOATING_POINT_SUPPORTED
 
-    , _pixels_per_meter( 0 )
-
     , _valid_icc_profile    ( 0                         )
     , _icc_name             (                           )
     , _iccp_compression_type( PNG_COMPRESSION_TYPE_BASE )
@@ -268,6 +269,8 @@ struct png_info_base
     , _res_y           ( 0                      )
     , _phy_unit_type   ( PNG_RESOLUTION_UNKNOWN )
 
+    , _pixels_per_meter( 0 )
+
     , _valid_significant_bits( 0 )
     , _sig_bits              (   )
 
@@ -277,8 +280,13 @@ struct png_info_base
     , _scale_width ( 0.0 )
     , _scale_height( 0.0 )
 #else
+#ifdef BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED
+    , _scale_width ( 0 )
+    , _scale_height( 0 )
+#else
     , _scale_width ()
     , _scale_height()
+#endif // BOOST_GIL_IO_PNG_FIXED_POINT_SUPPORTED
 #endif // BOOST_GIL_IO_PNG_FLOATING_POINT_SUPPORTED
 
     , _valid_text( 0 )
@@ -572,15 +580,16 @@ struct image_read_settings< png_tag > : public image_read_settings_base
     /// \param top_left Top left coordinate for reading partial image.
     /// \param dim      Dimensions for reading partial image.
     /// \param gamma    Screen gamma value.
-    image_read_settings( const point_t& top_left
-                       , const point_t& dim
-                       , double         gamma = 1.0
+    image_read_settings( const point_t&         top_left
+                       , const point_t&         dim
+                       , const bool             apply_screen_gamma = false
+                       , const png_gamma::type& screen_gamma = 1.0
                        )
     : image_read_settings_base( top_left
                               , dim
                               )
     , png_read_settings_base()
-    , _apply_screen_gamma( false )
+    , _apply_screen_gamma( apply_screen_gamma )
     , _screen_gamma( screen_gamma )
     {}
 

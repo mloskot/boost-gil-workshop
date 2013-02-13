@@ -1,5 +1,5 @@
 /*
-    Copyright 2008 Christian Henning
+    Copyright 2012 Christian Henning
     Use, modification and distribution are subject to the Boost Software License,
     Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
     http://www.boost.org/LICENSE_1_0.txt).
@@ -15,7 +15,7 @@
 /// \brief
 /// \author Christian Henning \n
 ///
-/// \date 2008 \n
+/// \date 2012 \n
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -28,39 +28,55 @@
 #include <boost/gil/extension/io_new/detail/base.hpp>
 #include <boost/gil/extension/io_new/detail/io_device.hpp>
 
-namespace boost { namespace gil { namespace detail {
+#include "writer_backend.hpp"
 
+namespace boost { namespace gil { 
+
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400) 
+#pragma warning(push) 
+#pragma warning(disable:4512) //assignment operator could not be generated 
+#endif
+
+namespace detail {
+
+struct pnm_write_is_supported
+{
+    template< typename View >
+    struct apply 
+        : public is_write_supported< typename get_pixel_type< View >::type
+                                   , pnm_tag
+                                   >
+    {};
+};
+
+} // namespace detail
+
+///
+/// PNM Writer
+///
 template< typename Device >
 class writer< Device
             , pnm_tag
             >
+    : public writer_backend< Device
+                           , pnm_tag
+                           >
 {
-    typedef image_write_info< pnm_tag > info_t;
+private:
+    typedef writer_backend< Device, pnm_tag > backend_t;
 
 public:
 
-    writer( Device & file )
-        : _out( file )
-    {
-    }
+    writer( const Device&                      io_dev
+          , const image_write_info< pnm_tag >& info
+          )
+    : backend_t( io_dev
+                , info
+                )
+    {}
 
-    ~writer()
-    {
-    }
-
-    template<typename View>
+    template< typename View >
     void apply( const View& view )
-    {
-        info_t info;
-
-        apply( view
-             , info );
-    }
-
-    template<typename View>
-    void apply( const View&   view
-              , const info_t& /* info */
-              )
     {
         typedef typename get_pixel_type< View >::type pixel_t;
 
@@ -70,22 +86,7 @@ public:
         std::size_t chn    = num_channels< View >::value;
         std::size_t pitch  = chn * width;
 
-        unsigned int type;
-        if( num_channels< View >::value == 1 )
-        {
-            if( is_bit_aligned< pixel_t >::value )
-            {
-                type = pnm_image_type::mono_bin_t::value;
-            }
-            else
-            {
-                type = pnm_image_type::gray_bin_t::value;
-            }
-        }
-        else
-        {
-            type = pnm_image_type::color_bin_t::value;
-        }
+        unsigned int type = get_type< num_channels< View >::value >( is_bit_aligned< pixel_t >() );
 
         // write header
 
@@ -93,19 +94,19 @@ public:
 
         std::string str( "P" );
         str += lexical_cast< std::string >( type ) + std::string( " " );
-        _out.print_line( str );
+        this->_io_dev.print_line( str );
 
         str.clear();
         str += lexical_cast< std::string >( width ) + std::string( " " );
-        _out.print_line( str );
+        this->_io_dev.print_line( str );
 
         str.clear();
         str += lexical_cast< std::string >( height ) + std::string( " " );
-        _out.print_line( str );
+        this->_io_dev.print_line( str );
 
         if( type != pnm_image_type::mono_bin_t::value )
         {
-            _out.print_line( "255 ");
+            this->_io_dev.print_line( "255 ");
         }
 
         // write data
@@ -113,6 +114,26 @@ public:
                   , pitch
                   , typename is_bit_aligned< pixel_t >::type()
                   );
+    }
+
+private:
+
+    template< int Channels >
+    unsigned int get_type( mpl::true_  /* is_bit_aligned */ )
+    {
+        return boost::mpl::if_c< Channels == 1
+                               , pnm_image_type::mono_bin_t
+                               , pnm_image_type::color_bin_t
+                               >::type::value;
+    }
+
+    template< int Channels >
+    unsigned int get_type( mpl::false_ /* is_bit_aligned */ )
+    {
+        return boost::mpl::if_c< Channels == 1
+                               , pnm_image_type::gray_bin_t
+                               , pnm_image_type::color_bin_t
+                               >::type::value;
     }
 
     template< typename View >
@@ -131,13 +152,13 @@ public:
         typedef typename View::x_iterator x_it_t;
         x_it_t row_it = x_it_t( &( *row.begin() ));
 
-        negate_bits< byte_vector_t
-                   , mpl::true_
-                   > neg;
+        detail::negate_bits< byte_vector_t
+                           , mpl::true_
+                           > neg;
 
-        mirror_bits< byte_vector_t
-                   , mpl::true_
-                   > mirror;
+        detail::mirror_bits< byte_vector_t
+                           , mpl::true_
+                           > mirror;
 
 
         for( typename View::y_coord_t y = 0; y < src.height(); ++y )
@@ -150,9 +171,9 @@ public:
             mirror( row );
             neg   ( row );
 
-            _out.write( &row.front()
-                      , pitch / 8
-                      );
+            this->_io_dev.write( &row.front()
+                               , pitch / 8
+                               );
         }
     }
 
@@ -162,50 +183,49 @@ public:
                    , const mpl::false_&    // bit_aligned
                    )
     {
-		byte_vector_t buf( pitch );
+        std::vector< pixel< typename channel_type< View >::type
+                          , layout<typename color_space_type< View >::type >
+                          >
+                   > buf( src.width() );
 
         typedef typename View::value_type pixel_t;
         typedef typename view_type_from_pixel< pixel_t >::type view_t;
 
-        view_t row = interleaved_view( src.width()
-                                     , 1
-                                     , reinterpret_cast< pixel_t* >( &buf.front() )
-                                     , pitch
-                                     );
+        //view_t row = interleaved_view( src.width()
+        //                             , 1
+        //                             , reinterpret_cast< pixel_t* >( &buf.front() )
+        //                             , pitch
+        //                             );
+
+        byte_t* row_addr = reinterpret_cast< byte_t* >( &buf.front() );
 
         for( typename View::y_coord_t y = 0
            ; y < src.height()
            ; ++y
            )
 		{
-            copy_pixels( subimage_view( src
-                                      , 0
-                                      , (int) y
-                                      , (int) src.width()
-                                      , 1
-                                      )
-                       , row
-                       );
+            //copy_pixels( subimage_view( src
+            //                          , 0
+            //                          , (int) y
+            //                          , (int) src.width()
+            //                          , 1
+            //                          )
+            //           , row
+            //           );
 
-            _out.write( &buf.front(), pitch );
+            std::copy( src.row_begin( y )
+                     , src.row_end  ( y )
+                     , buf.begin()
+                     );
+
+            this->_io_dev.write( row_addr, pitch );
 		}
     }
-
-private:
-
-    Device& _out;
 };
 
-struct pnm_write_is_supported
-{
-    template< typename View >
-    struct apply 
-        : public is_write_supported< typename get_pixel_type< View >::type
-                                   , pnm_tag
-                                   >
-    {};
-};
-
+///
+/// PNM Writer
+///
 template< typename Device >
 class dynamic_image_writer< Device
                           , pnm_tag
@@ -220,22 +240,29 @@ class dynamic_image_writer< Device
 
 public:
 
-    dynamic_image_writer( Device& file )
-    : parent_t( file )
+    dynamic_image_writer( const Device&                      io_dev
+                        , const image_write_info< pnm_tag >& info
+                        )
+    : parent_t( io_dev
+              , info
+              )
     {}
 
     template< typename Views >
     void apply( const any_image_view< Views >& views )
     {
-        dynamic_io_fnobj< pnm_write_is_supported
-                        , parent_t
-                        > op( this );
+        detail::dynamic_io_fnobj< detail::pnm_write_is_supported
+                                , parent_t
+                                > op( this );
 
         apply_operation( views, op );
     }
 };
 
-} // detail
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400) 
+#pragma warning(pop) 
+#endif 
+
 } // gil
 } // boost
 

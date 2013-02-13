@@ -1,5 +1,5 @@
 /*
-    Copyright 2010 Kenneth Riddile
+    Copyright 2010-2012 Kenneth Riddile, Christian Henning
     Use, modification and distribution are subject to the Boost Software License,
     Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
     http://www.boost.org/LICENSE_1_0.txt).
@@ -13,9 +13,9 @@
 ////////////////////////////////////////////////////////////////////////////////////////
 /// \file
 /// \brief
-/// \author Kenneth Riddile \n
+/// \author Kenneth Riddile, Christian Henning \n
 ///
-/// \date 2010 \n
+/// \date 2010-2012 \n
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -26,41 +26,60 @@
 
 #include <boost/gil/extension/io_new/targa_tags.hpp>
 
-namespace boost { namespace gil { namespace detail {
+#include "writer_backend.hpp"
+
+namespace boost { namespace gil {
+
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400) 
+#pragma warning(push) 
+#pragma warning(disable:4512) //assignment operator could not be generated 
+#endif
+
+namespace detail {
 
 template < int N > struct get_targa_view_type {};
 template <> struct get_targa_view_type< 3 > { typedef bgr8_view_t type; };
 template <> struct get_targa_view_type< 4 > { typedef bgra8_view_t type; };
 
+struct targa_write_is_supported
+{
+    template< typename View >
+    struct apply
+        : public is_write_supported< typename get_pixel_type< View >::type
+                                   , targa_tag
+                                   >
+    {};
+};
+
+} // detail
+
+///
+/// TARGA Writer
+///
 template< typename Device >
 class writer< Device
             , targa_tag
             >
+    : public writer_backend< Device
+                           , targa_tag
+                           >
 {
+private:
+     typedef writer_backend< Device, targa_tag > backend_t;
+
 public:
 
-    writer( Device& file )
-    : _out( file )
-    {
-    }
-
-    ~writer()
-    {
-    }
+    writer( const Device&                        io_dev
+          , const image_write_info< targa_tag >& info
+          )
+    : backend_t( io_dev
+               , info
+               )
+    {}
 
     template<typename View>
     void apply( const View& view )
     {
-        write( view );
-    }
-
-    template<typename View>
-    void apply( const View&                           view
-              , const image_write_info< targa_tag >& /* info */
-              )
-    {
-        // Add code here, once image_write_info< targa_tag > isn't empty anymore.
-
         write( view );
     }
 
@@ -72,29 +91,29 @@ private:
         uint8_t bit_depth = static_cast<uint8_t>( num_channels<View>::value * 8 );
 
         // write the TGA header
-        _out.write_uint8( 0 ); // offset
-        _out.write_uint8( targa_color_map_type::_rgb );
-        _out.write_uint8( targa_image_type::_rgb );
-        _out.write_uint16( 0 ); // color map start
-        _out.write_uint16( 0 ); // color map length
-        _out.write_uint8( 0 ); // color map depth
-        _out.write_uint16( 0 ); // x origin
-        _out.write_uint16( 0 ); // y origin
-        _out.write_uint16( static_cast<uint16_t>( view.width() ) ); // width in pixels
-        _out.write_uint16( static_cast<uint16_t>( view.height() ) ); // height in pixels
-        _out.write_uint8( bit_depth );
+        this->_io_dev.write_uint8( 0 ); // offset
+        this->_io_dev.write_uint8( targa_color_map_type::_rgb );
+        this->_io_dev.write_uint8( targa_image_type::_rgb );
+        this->_io_dev.write_uint16( 0 ); // color map start
+        this->_io_dev.write_uint16( 0 ); // color map length
+        this->_io_dev.write_uint8( 0 ); // color map depth
+        this->_io_dev.write_uint16( 0 ); // x origin
+        this->_io_dev.write_uint16( 0 ); // y origin
+        this->_io_dev.write_uint16( static_cast<uint16_t>( view.width() ) ); // width in pixels
+        this->_io_dev.write_uint16( static_cast<uint16_t>( view.height() ) ); // height in pixels
+        this->_io_dev.write_uint8( bit_depth );
 
         if( 32 == bit_depth )
         {
-            _out.write_uint8( 8 ); // 8-bit alpha channel descriptor
+            this->_io_dev.write_uint8( 8 ); // 8-bit alpha channel descriptor
         }
         else
         {
-            _out.write_uint8( 0 );
+            this->_io_dev.write_uint8( 0 );
         }
 
         write_image< View
-                   , typename get_targa_view_type< num_channels< View >::value >::type
+                   , typename detail::get_targa_view_type< num_channels< View >::value >::type
                    >( view );
     }
 
@@ -126,27 +145,15 @@ private:
                        , row
                        );
 
-            _out.write( &buffer.front(), row_size );
+            this->_io_dev.write( &buffer.front(), row_size );
         }
 
     }
-
-private:
-
-    Device& _out;
 };
 
-
-struct targa_write_is_supported
-{
-    template< typename View >
-    struct apply
-        : public is_write_supported< typename get_pixel_type< View >::type
-                                   , targa_tag
-                                   >
-    {};
-};
-
+///
+/// TARGA Dynamic Image Writer
+///
 template< typename Device >
 class dynamic_image_writer< Device
                           , targa_tag
@@ -161,22 +168,29 @@ class dynamic_image_writer< Device
 
 public:
 
-    dynamic_image_writer( Device& file )
-    : parent_t( file )
+    dynamic_image_writer( const Device&                        io_dev
+                        , const image_write_info< targa_tag >& info
+                        )
+    : parent_t( io_dev
+              , info
+              )
     {}
 
     template< typename Views >
     void apply( const any_image_view< Views >& views )
     {
-        dynamic_io_fnobj< targa_write_is_supported
-                        , parent_t
-                        > op( this );
+        detail::dynamic_io_fnobj< detail::targa_write_is_supported
+                                , parent_t
+                                > op( this );
 
         apply_operation( views, op );
     }
 };
 
-} // detail
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400) 
+#pragma warning(pop) 
+#endif 
+
 } // gil
 } // boost
 

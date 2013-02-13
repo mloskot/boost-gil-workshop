@@ -1,99 +1,107 @@
 /*
-    Copyright 2007-2008 Christian Henning, Andreas Pokorny, Lubomir Bourdev
+    Copyright 2012 Christian Henning
     Use, modification and distribution are subject to the Boost Software License,
     Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
     http://www.boost.org/LICENSE_1_0.txt).
 */
 
-/*************************************************************************************************/
-
-#ifndef BOOST_GIL_EXTENSION_IO_DETAIL_PNG_IO_BASE_HPP
-#define BOOST_GIL_EXTENSION_IO_DETAIL_PNG_IO_BASE_HPP
+#ifndef BOOST_GIL_EXTENSION_IO_PNG_BASE_HPP
+#define BOOST_GIL_EXTENSION_IO_PNG_BASE_HPP
 
 ////////////////////////////////////////////////////////////////////////////////////////
 /// \file
 /// \brief
-/// \author Christian Henning, Andreas Pokorny, Lubomir Bourdev \n
+/// \author Christian Henning \n
 ///
-/// \date   2007-2008 \n
+/// \date 2012 \n
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
 
 #include <boost/gil/extension/io_new/png_tags.hpp>
 
-#include <boost/gil/extension/io_new/detail/base.hpp>
-#include <boost/gil/extension/io_new/detail/reader_base.hpp>
-#include <boost/gil/extension/io_new/detail/io_device.hpp>
-#include <boost/gil/extension/io_new/detail/typedefs.hpp>
-
 namespace boost { namespace gil { namespace detail {
 
-template<typename Device>
-class png_io_base
+struct png_ptr_wrapper
 {
-public:
-    png_io_base( Device & io_dev )
-        : _io_dev(io_dev)
+    png_ptr_wrapper()
+    : _struct( NULL )
+    , _info  ( NULL )
     {}
 
+    png_structp _struct;
+    png_infop   _info;
+};
+
+///
+/// Wrapper for libpng's png_struct and png_info object. Implements value semantics.
+///
+struct png_struct_info_wrapper
+{
 protected:
-    Device & _io_dev;
 
-    void check() const
+    typedef boost::shared_ptr< png_ptr_wrapper > png_ptr_t;
+
+protected:
+
+    ///
+    /// Default Constructor
+    ///
+    png_struct_info_wrapper( bool read = true )
+    : _png_ptr( new png_ptr_wrapper()
+              , ( ( read ) ? png_ptr_read_deleter : png_ptr_write_deleter )
+              )
+    {}
+
+    png_ptr_wrapper*       get()       { return _png_ptr.get(); }
+    const png_ptr_wrapper* get() const { return _png_ptr.get(); }
+    
+    png_structp       get_struct()       { return get()->_struct; }
+    const png_structp get_struct() const { return get()->_struct; }
+
+    png_infop       get_info()       { return get()->_info; }
+    const png_infop get_info() const { return get()->_info; }
+
+private:
+
+    static void png_ptr_read_deleter( png_ptr_wrapper* png_ptr )
     {
-        byte_t buf[PNG_BYTES_TO_CHECK];
+        if( png_ptr )
+        {
+            assert( png_ptr->_struct && png_ptr->_info );
 
-        io_error_if(_io_dev.read(buf, PNG_BYTES_TO_CHECK) != PNG_BYTES_TO_CHECK,
-                "png_check_validity: failed to read image");
+            png_destroy_read_struct( &png_ptr->_struct
+                                   , &png_ptr->_info
+                                   , NULL
+                                   );
 
-        io_error_if(png_sig_cmp(png_bytep(buf), png_size_t(0), PNG_BYTES_TO_CHECK)!=0,
-                "png_check_validity: invalid png image");
+            delete png_ptr;
+            png_ptr = NULL;
+        }
     }
 
-    static void read_data( png_structp png_ptr
-                         , png_bytep   data
-                         , png_size_t length
-                         )
+    static void png_ptr_write_deleter( png_ptr_wrapper* png_ptr )
     {
-        static_cast<Device*>(png_get_io_ptr(png_ptr) )->read( data
-                                                            , length );
-    }
+        if( png_ptr )
+        {
+            assert( png_ptr->_struct && png_ptr->_info );
 
-    static void write_data( png_structp png_ptr
-                          , png_bytep   data
-                          , png_size_t  length
-                          )
-    {
-        static_cast<Device*>( png_get_io_ptr( png_ptr ))->write( data
-                                                               , length );
-    }
+            png_destroy_write_struct( &png_ptr->_struct
+                                    , &png_ptr->_info
+                                    );
 
-    static void flush( png_structp png_ptr )
-    {
-        static_cast<Device*>(png_get_io_ptr(png_ptr) )->flush();
+            delete png_ptr;
+            png_ptr = NULL;
+        }
     }
 
 
-    static int read_user_chunk_callback( png_struct*        /* png_ptr */
-                                       , png_unknown_chunkp /* chunk */
-                                       )
-    {
-        // @todo
-        return 0;
-    }
+private:
 
-    static void read_row_callback( png_structp /* png_ptr    */
-                                 , png_uint_32 /* row_number */
-                                 , int         /* pass       */
-                                 )
-    {
-        // @todo
-    }
-
+    png_ptr_t _png_ptr;
 };
 
 } // namespace detail
 } // namespace gil
 } // namespace boost
 
-#endif // BOOST_GIL_EXTENSION_IO_DETAIL_PNG_IO_BASE_HPP
+#endif // BOOST_GIL_EXTENSION_IO_PNG_BASE_HPP

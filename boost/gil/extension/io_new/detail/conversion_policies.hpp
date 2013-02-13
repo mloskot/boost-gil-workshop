@@ -72,8 +72,12 @@ public:
     typedef CC color_converter_type;
     CC _cc;
 
-    read_and_convert( color_converter_type const& cc )
-        : _cc(cc) {}
+    read_and_convert()
+    {}
+
+    read_and_convert( const color_converter_type& cc )
+    : _cc( cc )
+    {}
 
     template< typename InIterator
             , typename OutIterator
@@ -95,6 +99,14 @@ public:
                       );
     }
 };
+
+/// is_read_only metafunction
+/// \brief Determines if reader type is read only ( no conversion ).
+template< typename Conversion_Policy >
+struct is_read_only : mpl::false_ {};
+
+template<>
+struct is_read_only< detail::read_and_no_convert > : mpl::true_ {};
 
 } // namespace detail
 } // namespace gil

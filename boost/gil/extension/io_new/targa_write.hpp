@@ -23,6 +23,9 @@
 #include "formats/targa/supported_types.hpp"
 #include "formats/targa/write.hpp"
 
+#include "detail/make_writer.hpp"
+#include "detail/make_dynamic_image_writer.hpp"
+
 #include "detail/write_view.hpp"
 
 #endif // BOOST_GIL_EXTENSION_IO_TARGA_WRITE_HPP

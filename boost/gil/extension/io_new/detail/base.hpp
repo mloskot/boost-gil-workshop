@@ -32,7 +32,7 @@
 #include <boost/gil/bit_aligned_pixel_reference.hpp>
 #include <boost/gil/bit_aligned_pixel_iterator.hpp>
 
-#include <boost/gil/extension/toolbox/gil_extensions.hpp>
+#include <boost/gil/extension/toolbox/toolbox.hpp>
 
 #include "typedefs.hpp"
 #include "io_error.hpp"
@@ -67,6 +67,17 @@ protected:
     , _dim     ( dim      )
     {}
 
+
+public:
+
+    void set( const point_t& top_left
+            , const point_t& dim
+            )
+    {
+        _top_left = top_left;
+        _dim      = dim;
+    }
+
 public:
 
     point_t _top_left;
@@ -92,18 +103,21 @@ struct property_base
     typedef Property type;
 };
 
-struct read_support_true  { BOOST_STATIC_CONSTANT( bool, is_supported = true );  };
+} // namespace detail
+
+struct read_support_true  { BOOST_STATIC_CONSTANT( bool, is_supported = true  ); };
 struct read_support_false { BOOST_STATIC_CONSTANT( bool, is_supported = false ); };
-struct write_support_true { BOOST_STATIC_CONSTANT( bool, is_supported = true );  };
+struct write_support_true { BOOST_STATIC_CONSTANT( bool, is_supported = true  ); };
 struct write_support_false{ BOOST_STATIC_CONSTANT( bool, is_supported = false ); };
 
 class no_log {};
 
-} // namespace detail
+template< typename Device, typename FormatTag > struct reader_backend;
+template< typename Device, typename FormatTag > struct writer_backend;
 
-template<typename FormatTag> struct image_read_info;
-template<typename FormatTag> struct image_read_settings;
-template<typename FormatTag, typename Log = typename detail::no_log > struct image_write_info;
+template< typename FormatTag > struct image_read_info;
+template< typename FormatTag > struct image_read_settings;
+template< typename FormatTag, typename Log = no_log > struct image_write_info;
 
 } // namespace gil
 } // namespace boost

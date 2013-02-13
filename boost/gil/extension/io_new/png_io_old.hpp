@@ -30,12 +30,16 @@ template< typename String >
 inline
 point2< std::ptrdiff_t > png_read_dimensions( const String& filename )
 {
-    image_read_info< png_tag > info = read_image_info( filename
-                                                     , png_tag()
-                                                     );
+    typedef typename get_reader_backend< String
+                                       , png_tag
+                                       >::type backend_t;
 
-    return point2< std::ptrdiff_t >( info._width
-                                   , info._height
+    backend_t backend = read_image_info( filename
+                                       , png_tag()
+                                       );
+
+    return point2< std::ptrdiff_t >( backend._info._width
+                                   , backend._info._height
                                    );
 }
 

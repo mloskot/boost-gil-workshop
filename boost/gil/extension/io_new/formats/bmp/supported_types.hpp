@@ -24,8 +24,11 @@
 
 #include <boost/gil/channel.hpp>
 #include <boost/gil/color_base.hpp>
+#include <boost/gil/bit_aligned_pixel_reference.hpp>
+#include <boost/gil/packed_pixel.hpp>
 
 #include <boost/gil/extension/io_new/detail/base.hpp>
+
 
 namespace boost { namespace gil { namespace detail {
 

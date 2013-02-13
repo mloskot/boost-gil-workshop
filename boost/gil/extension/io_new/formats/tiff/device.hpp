@@ -22,14 +22,6 @@
 // taken from jpegxx - https://bitbucket.org/edd/jpegxx/src/ea2492a1a4a6/src/ijg_headers.hpp
 #ifndef BOOST_GIL_EXTENSION_IO_TIFF_C_LIB_COMPILED_AS_CPLUSPLUS
     extern "C" {
-#else
-    // DONT_USE_EXTERN_C introduced in v7 of the IJG library.
-    // By default the v7 IJG headers check for __cplusplus being defined and
-    // wrap the content in an 'extern "C"' block if it's present.
-    // When DONT_USE_EXTERN_C is defined, this wrapping is not performed.
-    #ifndef DONT_USE_EXTERN_C
-        #define DONT_USE_EXTERN_C 1
-    #endif
 #endif
 
 #include <tiff.h>
@@ -92,7 +84,8 @@ public:
 
     // TIFFIsByteSwapped returns a non-zero value if the image data was in a different 
     // byte-order than the host machine. Zero is returned if the TIFF file and local 
-    // host byte-orders are the same.
+    // host byte-orders are the same. Note that TIFFReadTile(), TIFFReadStrip() and TIFFReadScanline() 
+    // functions already normally perform byte swapping to local host order if needed.
     bool are_bytes_swapped()
     {
         return ( TIFFIsByteSwapped( _tiff_file.get() )) ? true : false;
@@ -147,6 +140,19 @@ public:
                    );
     }
 
+    void read_scanline( byte_t*        buffer
+                      , std::ptrdiff_t row
+                      , tsample_t      plane
+                      )
+    {
+        io_error_if( TIFFReadScanline( _tiff_file.get()
+                                     , reinterpret_cast< tdata_t >( buffer )
+                                     , (uint32) row
+                                     , plane           ) == -1
+                   , "Read error."
+                   );
+    }
+
     template< typename Buffer >
     void read_tile( Buffer&        buffer
                   , std::ptrdiff_t x
@@ -177,6 +183,20 @@ public:
     {
        io_error_if( TIFFWriteScanline( _tiff_file.get()
                                      , &buffer.front()
+                                     , row
+                                     , plane 
+                                     ) == -1
+                   , "Write error"
+                   );
+    }
+
+    void write_scaline( byte_t*     buffer
+                      , uint32      row
+                      , tsample_t   plane
+                      )
+    {
+       io_error_if( TIFFWriteScanline( _tiff_file.get()
+                                     , buffer
                                      , row
                                      , plane 
                                      ) == -1
@@ -311,6 +331,9 @@ public:
     }
 
 private:
+    ostream_device& operator=( const ostream_device& ) { return *this; }
+
+private:
 
     std::ostream& _out;
 };
@@ -337,6 +360,9 @@ public:
 
         _tiff_file = tiff_file_t( tiff, TIFFClose );
     }
+
+private:
+    istream_device& operator=( const istream_device& ) { return *this; }
 
 private:
 
@@ -367,6 +393,24 @@ struct is_adaptable_output_device< FormatTag
 {
     typedef file_stream_device< FormatTag > device_type;
 };
+
+
+template < typename Channel > struct sample_format : public mpl::int_<SAMPLEFORMAT_UINT> {};
+template<> struct sample_format<bits8>   : public mpl::int_<SAMPLEFORMAT_UINT> {};
+template<> struct sample_format<bits16>  : public mpl::int_<SAMPLEFORMAT_UINT> {};
+template<> struct sample_format<bits32>  : public mpl::int_<SAMPLEFORMAT_UINT> {};
+template<> struct sample_format<bits32f> : public mpl::int_<SAMPLEFORMAT_IEEEFP> {};
+template<> struct sample_format<double>  : public mpl::int_<SAMPLEFORMAT_IEEEFP> {};
+template<> struct sample_format<bits8s>  : public mpl::int_<SAMPLEFORMAT_INT> {};
+template<> struct sample_format<bits16s> : public mpl::int_<SAMPLEFORMAT_INT> {};
+template<> struct sample_format<bits32s> : public mpl::int_<SAMPLEFORMAT_INT> {};
+
+template <typename Channel> struct photometric_interpretation {};
+template<> struct photometric_interpretation< gray_t > : public mpl::int_< PHOTOMETRIC_MINISBLACK > {};
+template<> struct photometric_interpretation< rgb_t  > : public mpl::int_< PHOTOMETRIC_RGB        > {};
+template<> struct photometric_interpretation< rgba_t > : public mpl::int_< PHOTOMETRIC_RGB        > {};
+template<> struct photometric_interpretation< cmyk_t > : public mpl::int_< PHOTOMETRIC_SEPARATED  > {};
+
 
 } // namespace detail
 } // namespace gil

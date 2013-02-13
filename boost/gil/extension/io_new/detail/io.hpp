@@ -33,7 +33,7 @@
  *  - An image reader must be specialized:
  *    \code
  *      template<typename IODevice, typename ConversionPolicy>
- *      struct boost::gil::detail::reader<IODevice,FormatTag,ConversionPolicy>
+ *      struct boost::gil::reader<IODevice,FormatTag,ConversionPolicy>
  *      {
  *        reader( IODevice & device )
  *        reader( IODevice & device, typename ConversionPolicy::color_converter_type const& cc )
@@ -47,7 +47,7 @@
  *  - An image writer must be specialized:
  *    \code
  *      \template <typename IODevice>
- *      struct boost::gil::detail::writer<IODevice,FormatTag>
+ *      struct boost::gil::writer<IODevice,FormatTag>
  *      {
  *        writer( IODevice & device )
  *        template<typename View>

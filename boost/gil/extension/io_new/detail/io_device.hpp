@@ -1,5 +1,5 @@
 /*
-    Copyright 2007-2008 Andreas Pokorny, Christian Henning
+    Copyright 2007-2012 Andreas Pokorny, Christian Henning
     Use, modification and distribution are subject to the Boost Software License,
     Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
     http://www.boost.org/LICENSE_1_0.txt).
@@ -15,7 +15,7 @@
 /// \brief
 /// \author Andreas Pokorny, Christian Henning \n
 ///
-/// \date   2007-2008 \n
+/// \date   2007-2012 \n
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -26,7 +26,15 @@
 #include <boost/utility/enable_if.hpp>
 #include "base.hpp"
 
-namespace boost { namespace gil { namespace detail {
+namespace boost { namespace gil {
+
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400) 
+#pragma warning(push) 
+#pragma warning(disable:4512) //assignment operator could not be generated 
+#endif
+
+
+namespace detail {
 
 template < typename T > struct buff_item
 {
@@ -54,63 +62,142 @@ class file_stream_device
 {
 public:
 
-   typedef FormatTag _tag_t;
+   typedef FormatTag format_tag_t;
 
 public:
+
+    /// Used to overload the constructor.
     struct read_tag {};
     struct write_tag {};
 
-    file_stream_device( std::string const& file_name, read_tag )
-        : file(0),_close(true)
+    ///
+    /// Constructor
+    ///
+    file_stream_device( const std::string& file_name
+                      , read_tag   = read_tag()
+                      )
     {
+        FILE* file = NULL;
+
         io_error_if( ( file = fopen( file_name.c_str(), "rb" )) == NULL
-                , "file_stream_device: failed to open file" );
+                   , "file_stream_device: failed to open file"
+                   );
+
+        _file = file_ptr_t( file
+                          , file_deleter
+                          );
     }
 
-    file_stream_device( std::string const& file_name, write_tag )
-        : file(0),_close(true)
+    ///
+    /// Constructor
+    ///
+    file_stream_device( const char* file_name
+                      , read_tag   = read_tag()
+                      )
     {
+        FILE* file = NULL;
+
+        io_error_if( ( file = fopen( file_name, "rb" )) == NULL
+                   , "file_stream_device: failed to open file"
+                   );
+
+        _file = file_ptr_t( file
+                          , file_deleter
+                          );
+    }
+
+    ///
+    /// Constructor
+    ///
+    file_stream_device( const std::string& file_name
+                      , write_tag
+                      )
+    {
+        FILE* file = NULL;
+
         io_error_if( ( file = fopen( file_name.c_str(), "wb" )) == NULL
-                , "file_stream_device: failed to open file" );
+                   , "file_stream_device: failed to open file"
+                   );
+
+        _file = file_ptr_t( file
+                          , file_deleter
+                          );
     }
 
-    file_stream_device( FILE * filep)
-        : file(filep),_close(false)
+    ///
+    /// Constructor
+    ///
+    file_stream_device( const char* file_name
+                      , write_tag
+                      )
     {
+        FILE* file = NULL;
+
+        io_error_if( ( file = fopen( file_name, "wb" )) == NULL
+                   , "file_stream_device: failed to open file"
+                   );
+
+        _file = file_ptr_t( file
+                          , file_deleter
+                          );
     }
 
-    ~file_stream_device()
-    {
-        if(_close)
-            fclose(file);
-    }
+    ///
+    /// Constructor
+    ///
+    file_stream_device( FILE* file )
+    : _file( file
+           , file_deleter
+           )
+    {}
+
+    FILE*       get()       { return _file.get(); }
+    const FILE* get() const { return _file.get(); }
 
     int getc_unchecked()
     {
-        return std::getc( file );
+        return std::getc( get() );
     }
 
     char getc()
     {
         int ch;
 
-        if(( ch = std::getc( file )) == EOF )
+        if(( ch = std::getc( get() )) == EOF )
             io_error( "file_stream_device: unexpected EOF" );
 
         return ( char ) ch;
     }
 
+    ///@todo: change byte_t* to void*
     std::size_t read( byte_t*     data
-                    , std::size_t count )
+                    , std::size_t count
+                    )
     {
-        return fread( data, 1, static_cast<int>( count ), file );
+        std::size_t num_elements = fread( data
+                                        , 1
+                                        , static_cast<int>( count )
+                                        , get()
+                                        );
+
+        ///@todo: add compiler symbol to turn error checking on and off.
+        if(ferror( get() ))
+        {
+            assert( false );
+        }
+
+        //libjpeg sometimes reads blocks in 4096 bytes even when the file is smaller than that.
+        //assert( num_elements == count );
+        assert( num_elements > 0 );
+
+        return num_elements;
     }
 
     /// Reads array
     template< typename T
             , int      N
             >
-    size_t read( T (&buf)[N] )
+    std::size_t read( T (&buf)[N] )
     {
 	    return read( buf, N );
     }
@@ -144,16 +231,27 @@ public:
 
     /// Writes number of elements from a buffer
     template < typename T >
-    size_t write(const T *buf, size_t cnt) throw()
+    std::size_t write( const T*    buf
+                     , std::size_t count
+                     )
+    throw()
     {
-        return fwrite( buf, buff_item<T>::size, cnt, file );
+        std::size_t num_elements = fwrite( buf
+                                         , buff_item<T>::size
+                                         , count
+                                         , get()
+                                         );
+
+        assert( num_elements == count );
+
+        return num_elements;
     }
 
     /// Writes array
-    template < typename T
-             , size_t   N
+    template < typename    T
+             , std::size_t N
              >
-    size_t write( const T (&buf)[N] ) throw()
+    std::size_t write( const T (&buf)[N] ) throw()
     {
         return write( buf, N );
     }
@@ -189,35 +287,64 @@ public:
 	    write( m );
     }
 
-
-    //!\todo replace with std::ios::seekdir?
     void seek( long count, int whence = SEEK_SET )
     {
-        fseek(file, count, whence );
+        io_error_if( fseek( get()
+                          , count
+                          , whence
+                          ) != 0
+                   , "file read error"
+                   );
     }
+
+    long int tell()
+    {
+        long int pos = ftell( get() );
+
+        io_error_if( pos == -1L
+                   , "file read error"
+                   );
+
+        return pos;
+    } 
 
     void flush()
     {
-        fflush( file );
+        fflush( get() );
     }
 
     /// Prints formatted ASCII text
     void print_line( const std::string& line )
     {
-        fwrite( line.c_str(), sizeof( char ), line.size(), file );
+        std::size_t num_elements = fwrite( line.c_str()
+                                         , sizeof( char )
+                                         , line.size()
+                                         , get()
+                                         );
+
+        assert( num_elements == line.size() );
+    }
+
+    int error()
+    {
+        return ferror( get() );
     }
 
 private:
 
-    file_stream_device( file_stream_device const& );
-    file_stream_device& operator=( file_stream_device const& );
+    static void file_deleter( FILE* file )
+    {
+        if( file )
+        {
+            fclose( file );
+        }
+    }    
 
-    FILE* file;
+private:
 
-    bool _close;
-
+    typedef boost::shared_ptr< FILE > file_ptr_t;
+    file_ptr_t _file;
 };
-
 
 /**
  * Input stream device
@@ -334,8 +461,8 @@ public:
     {
     }
 
-    size_t read( byte_t*     data
-               , std::size_t count )
+    std::size_t read( byte_t*     data
+                    , std::size_t count )
     {
         io_error( "Bad io error." );
 
@@ -362,8 +489,8 @@ public:
     }
 
     /// Writes array
-    template < typename T
-             , size_t   N
+    template < typename    T
+             , std::size_t N
              >
     void write( const T (&buf)[N] ) throw()
     {
@@ -458,6 +585,29 @@ struct is_adaptable_input_device< FormatTag
     typedef file_stream_device< FormatTag > device_type;
 };
 
+///
+/// Metafunction to decide if a given type is an acceptable read device type.
+///
+template< typename FormatTag
+        , typename T
+        , typename D = void
+        >
+struct is_read_device : mpl::false_
+{};
+
+template< typename FormatTag
+        , typename T
+        >
+struct is_read_device< FormatTag
+                     , T
+                     , typename enable_if< mpl::or_< is_input_device< FormatTag >
+                                                   , is_adaptable_input_device< FormatTag
+                                                                              , T
+                                                                              >
+                                                   >
+                                         >::type
+                     > : mpl::true_
+{};
 
 
 /**
@@ -494,12 +644,104 @@ template<typename FormatTag> struct is_adaptable_output_device<FormatTag,FILE*,v
     typedef file_stream_device< FormatTag > device_type;
 };
 
+
+///
+/// Metafunction to decide if a given type is an acceptable read device type.
+///
+template< typename FormatTag
+        , typename T
+        , typename D = void
+        >
+struct is_write_device : mpl::false_
+{};
+
+template< typename FormatTag
+        , typename T
+        >
+struct is_write_device< FormatTag
+                      , T
+                      , typename enable_if< mpl::or_< is_output_device< FormatTag >
+                                                    , is_adaptable_output_device< FormatTag
+                                                                                , T
+                                                                                >
+                                                    >
+                                          >::type
+                      > : mpl::true_
+{};
+
+} // namespace detail
+
+template< typename Device, typename FormatTag > class scanline_reader;
 template< typename Device, typename FormatTag, typename ConversionPolicy > class reader;
+
 template< typename Device, typename FormatTag, typename Log = no_log > class writer;
 
 template< typename Device, typename FormatTag > class dynamic_image_reader;
 template< typename Device, typename FormatTag, typename Log = no_log > class dynamic_image_writer;
+
+
+namespace detail {
+
+template< typename T >
+struct is_reader : mpl::false_
+{};
+
+template< typename Device
+        , typename FormatTag
+        , typename ConversionPolicy
+        >
+struct is_reader< reader< Device
+                        , FormatTag
+                        , ConversionPolicy
+                        >
+                > : mpl::true_
+{};
+
+template< typename T >
+struct is_dynamic_image_reader : mpl::false_
+{};
+
+template< typename Device
+        , typename FormatTag
+        >
+struct is_dynamic_image_reader< dynamic_image_reader< Device
+                                                    , FormatTag
+                                                    >
+                              > : mpl::true_
+{};
+
+template< typename T >
+struct is_writer : mpl::false_
+{};
+
+template< typename Device
+        , typename FormatTag
+        >
+struct is_writer< writer< Device
+                        , FormatTag
+                        >
+                > : mpl::true_
+{};
+
+template< typename T >
+struct is_dynamic_image_writer : mpl::false_
+{};
+
+template< typename Device
+        , typename FormatTag
+        >
+struct is_dynamic_image_writer< dynamic_image_writer< Device
+                                                    , FormatTag
+                                                    >
+                > : mpl::true_
+{};
+
 } // namespace detail
+
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400) 
+#pragma warning(pop) 
+#endif 
+
 } // namespace gil
 } // namespace boost
 

@@ -1,5 +1,5 @@
 /*
-    Copyright 2007-2008 Christian Henning, Lubomir Bourdev
+    Copyright 2007-2012 Christian Henning, Lubomir Bourdev
     Use, modification and distribution are subject to the Boost Software License,
     Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
     http://www.boost.org/LICENSE_1_0.txt).
@@ -15,21 +15,13 @@
 /// \brief
 /// \author Christian Henning, Lubomir Bourdev \n
 ///
-/// \date   2007-2008 \n
+/// \date   2007-2012 \n
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
 
 // taken from jpegxx - https://bitbucket.org/edd/jpegxx/src/ea2492a1a4a6/src/ijg_headers.hpp
 #ifndef BOOST_GIL_EXTENSION_IO_TIFF_C_LIB_COMPILED_AS_CPLUSPLUS
     extern "C" {
-#else
-    // DONT_USE_EXTERN_C introduced in v7 of the IJG library.
-    // By default the v7 IJG headers check for __cplusplus being defined and
-    // wrap the content in an 'extern "C"' block if it's present.
-    // When DONT_USE_EXTERN_C is defined, this wrapping is not performed.
-    #ifndef DONT_USE_EXTERN_C
-        #define DONT_USE_EXTERN_C 1
-    #endif
 #endif
 
 #include <tiff.h>
@@ -42,6 +34,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+
 #include <boost/static_assert.hpp>
 
 #include <boost/gil/extension/io_new/detail/base.hpp>
@@ -51,11 +44,17 @@
 #include <boost/gil/extension/io_new/detail/io_device.hpp>
 #include <boost/gil/extension/io_new/detail/reader_base.hpp>
 
+#include "reader_backend.hpp"
 #include "device.hpp"
 #include "is_allowed.hpp"
 
 
-namespace boost { namespace gil { namespace detail {
+namespace boost { namespace gil { 
+
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400) 
+#pragma warning(push) 
+#pragma warning(disable:4512) //assignment operator could not be generated 
+#endif
 
 template < int K >
 struct plane_recursion
@@ -74,7 +73,7 @@ struct plane_recursion
       typedef typename kth_channel_view_type< K, View >::type plane_t;
       plane_t plane = kth_channel_view<K>( dst_view );
 
-      p->template read_data< row_buffer_helper_view< plane_t > >( plane, K );
+      p->template read_data< detail::row_buffer_helper_view< plane_t > >( plane, K );
 
       plane_recursion< K - 1 >::read_plane( dst_view, p );
    }
@@ -97,6 +96,9 @@ struct plane_recursion< -1 >
     {}
 };
 
+///
+/// Tiff Reader
+///
 template< typename Device
         , typename ConversionPolicy
         >
@@ -106,70 +108,48 @@ class reader< Device
             >
     : public reader_base< tiff_tag
                         , ConversionPolicy >
+
+    , public reader_backend< Device
+                           , tiff_tag
+                           >
 {
+private:
+
+    typedef reader< Device
+                  , tiff_tag
+                  , ConversionPolicy
+                  > this_t;
+
+    typedef typename ConversionPolicy::color_converter_type cc_t;
+
 public:
 
-    reader( Device&                                device
+    typedef reader_backend< Device, tiff_tag > backend_t;
+
+public:
+
+    reader( const Device&                          io_dev
           , const image_read_settings< tiff_tag >& settings
           )
     : reader_base< tiff_tag
                  , ConversionPolicy
-                 >( settings )
-    , _io_dev( device )
-    {
-        init_multipage_read( settings );
-    }
+                 >()
+    , backend_t( io_dev
+               , settings
+               )
+    {}
 
-    reader( Device&                                                device
+    reader( const Device&                                          io_dev
           , const typename ConversionPolicy::color_converter_type& cc
           , const image_read_settings< tiff_tag >&                 settings
           )
     : reader_base< tiff_tag
                  , ConversionPolicy
-                 >( cc
-                  , settings
-                  )
-    , _io_dev( device )
-    {
-        init_multipage_read( settings );
-    }
-
-   image_read_info<tiff_tag> get_info() const
-   {
-      image_read_info<tiff_tag> info;
-
-      io_error_if( _io_dev.template get_property<tiff_image_width>               ( info._width ) == false
-                 , "cannot read tiff tag." );
-      io_error_if( _io_dev.template get_property<tiff_image_height>              ( info._height ) == false
-                 , "cannot read tiff tag." );
-      io_error_if( _io_dev.template get_property<tiff_compression>               ( info._compression ) == false
-                 , "cannot read tiff tag." );
-      io_error_if( _io_dev.template get_property<tiff_samples_per_pixel>         ( info._samples_per_pixel ) == false
-                 , "cannot read tiff tag." );
-      io_error_if( _io_dev.template get_property<tiff_bits_per_sample>           ( info._bits_per_sample ) == false
-                 , "cannot read tiff tag." );
-      io_error_if( _io_dev.template get_property<tiff_sample_format>             ( info._sample_format ) == false
-                 , "cannot read tiff tag." );
-      io_error_if( _io_dev.template get_property<tiff_planar_configuration>      ( info._planar_configuration ) == false
-                 , "cannot read tiff tag." );
-      io_error_if( _io_dev.template get_property<tiff_photometric_interpretation>( info._photometric_interpretation  ) == false
-                 , "cannot read tiff tag." );
-
-      info._is_tiled = false;
-
-      // Tile tags
-      if( _io_dev.is_tiled() )
-      {
-          info._is_tiled = true;
-
-          io_error_if( !_io_dev.template get_property< tiff_tile_width  >( info._tile_width )
-                       , "cannot read tiff_tile_width tag." );
-          io_error_if( !_io_dev.template get_property< tiff_tile_length >( info._tile_length )
-                       , "cannot read tiff_tile_length tag." );
-      }
-
-      return info;
-   }
+                 >( cc )
+    , backend_t( io_dev
+               , settings
+               )
+    {}
 
     // only works for homogeneous image types
     template< typename View >
@@ -177,6 +157,10 @@ public:
     {
         if( this->_info._photometric_interpretation == PHOTOMETRIC_PALETTE )
         {
+            this->_scanline_length = this->_info._width 
+                                   * num_channels< rgb16_view_t >::value 
+                                   * sizeof( channel_type<rgb16_view_t>::type );
+
             // Steps:
             // 1. Read indices. It's an array of grayX_pixel_t.
             // 2. Read palette. It's an array of rgb16_pixel_t.
@@ -200,17 +184,19 @@ public:
         }
         else
         {
+            this->_scanline_length = this->_io_dev.get_scanline_size();
+
             // In case we only read the image the user's type and
             // the tiff type need to compatible. Which means:
             // color_spaces_are_compatible && channels_are_pairwise_compatible
 
             typedef typename is_same< ConversionPolicy
-                                    , read_and_no_convert
+                                    , detail::read_and_no_convert
                                     >::type is_read_only;
 
-            io_error_if( !is_allowed< View >( this->_info
-                                            , is_read_only()
-                                            )
+            io_error_if( !detail::is_allowed< View >( this->_info
+                                                    , is_read_only()
+                                                    )
                        , "Image types aren't compatible."
                        );
 
@@ -222,84 +208,9 @@ public:
             }
             else if( this->_info._planar_configuration == PLANARCONFIG_CONTIG )
             {
-                if( is_read_only::value == false )
-                {
-                    // the read_data function needs to know what gil type the source image is
-                    // to have the default color converter function correctly
-
-                    switch( this->_info._photometric_interpretation )
-                    {
-                        case PHOTOMETRIC_MINISWHITE:
-                        case PHOTOMETRIC_MINISBLACK:
-                        {
-                            switch( this->_info._bits_per_sample )
-                            {
-                                case  1: { read_data< row_buffer_helper_view< gray1_image_t::view_t > >( dst_view, 0 );  break; }
-                                case  2: { read_data< row_buffer_helper_view< gray2_image_t::view_t > >( dst_view, 0 );  break; }
-                                case  4: { read_data< row_buffer_helper_view< gray4_image_t::view_t > >( dst_view, 0 );  break; }
-                                case  8: { read_data< row_buffer_helper_view< gray8_view_t  > >( dst_view, 0 );  break; }
-                                case 16: { read_data< row_buffer_helper_view< gray16_view_t > >( dst_view, 0 );  break; }
-                                case 32: { read_data< row_buffer_helper_view< gray32_view_t > >( dst_view, 0 );  break; }
-                                default: { io_error( "Image type is not supported." ); }
-                            }
-
-                            break;
-                        }
-
-                        case PHOTOMETRIC_RGB:
-                        {
-                            switch( this->_info._samples_per_pixel )
-                            {
-                                case 3:
-                                {
-                                    switch( this->_info._bits_per_sample )
-                                    {
-                                        case  8: { read_data< row_buffer_helper_view< rgb8_view_t  > >( dst_view, 0 );  break; }
-                                        case 16: { read_data< row_buffer_helper_view< rgb16_view_t > >( dst_view, 0 );  break; }
-                                        case 32: { read_data< row_buffer_helper_view< rgb32_view_t > >( dst_view, 0 );  break; }
-                                        default: { io_error( "Image type is not supported." ); }
-                                    }
-
-                                    break;
-                                }
-
-                                case 4:
-                                {
-                                    switch( this->_info._bits_per_sample )
-                                    {
-                                        case  8: { read_data< row_buffer_helper_view< rgba8_view_t  > >( dst_view, 0 );  break; }
-                                        case 16: { read_data< row_buffer_helper_view< rgba16_view_t > >( dst_view, 0 );  break; }
-                                        case 32: { read_data< row_buffer_helper_view< rgba32_view_t > >( dst_view, 0 );  break; }
-                                        default: { io_error( "Image type is not supported." ); }
-                                    }
-
-                                    break;
-                                }
-
-                                default: { io_error( "Image type is not supported." ); }
-                            }
-
-                            break;
-                        }
-                        case PHOTOMETRIC_SEPARATED: // CYMK
-                        {
-                            switch( this->_info._bits_per_sample )
-                            {
-                                case  8: { read_data< row_buffer_helper_view< cmyk8_view_t  > >( dst_view, 0 );  break; }
-                                case 16: { read_data< row_buffer_helper_view< cmyk16_view_t > >( dst_view, 0 );  break; }
-                                case 32: { read_data< row_buffer_helper_view< cmyk32_view_t > >( dst_view, 0 );  break; }
-                            }
-
-                            break;
-                        }
-
-                        default: { io_error( "Image type is not supported." ); }
-                    }
-                }
-                else
-                {
-                    read_data< row_buffer_helper_view< View > >( dst_view, 0 );
-                }
+                read( dst_view
+                    , typename is_read_only::type()
+                    );
             }
             else
             {
@@ -307,16 +218,95 @@ public:
             }
         }
     }
-
+    
 private:
 
-    void init_multipage_read( const image_read_settings< tiff_tag >& settings )
+    template< typename View >
+    void read( View v
+             , mpl::true_ // is_read_only
+             )
     {
-        if( settings._directory > 0 )
+        read_data< detail::row_buffer_helper_view< View > >( v, 0 );
+    }
+
+    template< typename View >
+    void read( View v
+             , mpl::false_  // is_read_only
+             )
+    {
+        // the read_data function needs to know what gil type the source image is
+        // to have the default color converter function correctly
+
+        switch( this->_info._photometric_interpretation )
         {
-            _io_dev.set_directory( settings._directory );
+            case PHOTOMETRIC_MINISWHITE:
+            case PHOTOMETRIC_MINISBLACK:
+            {
+                switch( this->_info._bits_per_sample )
+                {
+                    case  1: { read_data< detail::row_buffer_helper_view< gray1_image_t::view_t > >( v, 0 );  break; }
+                    case  2: { read_data< detail::row_buffer_helper_view< gray2_image_t::view_t > >( v, 0 );  break; }
+                    case  4: { read_data< detail::row_buffer_helper_view< gray4_image_t::view_t > >( v, 0 );  break; }
+                    case  8: { read_data< detail::row_buffer_helper_view< gray8_view_t  > >( v, 0 );  break; }
+                    case 16: { read_data< detail::row_buffer_helper_view< gray16_view_t > >( v, 0 );  break; }
+                    case 32: { read_data< detail::row_buffer_helper_view< gray32_view_t > >( v, 0 );  break; }
+                    default: { io_error( "Image type is not supported." ); }
+                }
+
+                break;
+            }
+
+            case PHOTOMETRIC_RGB:
+            {
+                switch( this->_info._samples_per_pixel )
+                {
+                    case 3:
+                    {
+                        switch( this->_info._bits_per_sample )
+                        {
+                            case  8: { read_data< detail::row_buffer_helper_view< rgb8_view_t  > >( v, 0 );  break; }
+                            case 16: { read_data< detail::row_buffer_helper_view< rgb16_view_t > >( v, 0 );  break; }
+                            case 32: { read_data< detail::row_buffer_helper_view< rgb32_view_t > >( v, 0 );  break; }
+                            default: { io_error( "Image type is not supported." ); }
+                        }
+
+                        break;
+                    }
+
+                    case 4:
+                    {
+                        switch( this->_info._bits_per_sample )
+                        {
+                            case  8: { read_data< detail::row_buffer_helper_view< rgba8_view_t  > >( v, 0 );  break; }
+                            case 16: { read_data< detail::row_buffer_helper_view< rgba16_view_t > >( v, 0 );  break; }
+                            case 32: { read_data< detail::row_buffer_helper_view< rgba32_view_t > >( v, 0 );  break; }
+                            default: { io_error( "Image type is not supported." ); }
+                        }
+
+                        break;
+                    }
+
+                    default: { io_error( "Image type is not supported." ); }
+                }
+
+                break;
+            }
+            case PHOTOMETRIC_SEPARATED: // CYMK
+            {
+                switch( this->_info._bits_per_sample )
+                {
+                    case  8: { read_data< detail::row_buffer_helper_view< cmyk8_view_t  > >( v, 0 );  break; }
+                    case 16: { read_data< detail::row_buffer_helper_view< cmyk16_view_t > >( v, 0 );  break; }
+                    case 32: { read_data< detail::row_buffer_helper_view< cmyk32_view_t > >( v, 0 );  break; }
+                    default: { io_error( "Image type is not supported." ); }
+                }
+
+                break;
+            }
+
+            default: { io_error( "Image type is not supported." ); }
         }
-    } 
+    }
 
    template< typename PaletteImage
            , typename View
@@ -327,7 +317,7 @@ private:
                           , this->_info._height - this->_settings._top_left.y );
 
       // read the palette first
-      read_data< row_buffer_helper_view< typename PaletteImage::view_t > >( view( indices ), 0 );
+      read_data< detail::row_buffer_helper_view< typename PaletteImage::view_t > >( view( indices ), 0 );
 
       read_palette_image( dst_view
                         , view( indices )
@@ -346,7 +336,7 @@ private:
       tiff_color_map::green_t green = NULL;
       tiff_color_map::blue_t  blue  = NULL;
 
-      _io_dev.get_field_defaulted( red, green, blue );
+      this->_io_dev.get_field_defaulted( red, green, blue );
 
       typedef typename channel_traits<
                     typename element_type<
@@ -360,8 +350,6 @@ private:
                                                    , green
                                                    , blue
                                                    , sizeof( bits16 ) * num_colors );
-
-      typename rgb16_planar_view_t::x_iterator palette_it = palette.row_begin( 0 );
 
       for( typename rgb16_view_t::y_coord_t y = 0; y < dst_view.height(); ++y )
       {
@@ -402,7 +390,7 @@ private:
          // page ( diagnostics section ) for more information.
          for( std::ptrdiff_t row = 0; row < this->_settings._top_left.y; ++row )
          {
-            _io_dev.read_scanline( buffer
+            this->_io_dev.read_scanline( buffer
                                  , row
                                  , static_cast< tsample_t >( plane ));
          }
@@ -413,9 +401,9 @@ private:
            , typename View
            >
    void read_data( const View& dst_view
-                 , int         plane     )
+                 , int         /* plane */ )
     {
-        if( _io_dev.is_tiled() )
+        if( this->_io_dev.is_tiled() )
         {
             read_tiled_data< Buffer >( dst_view, 0 );
         }
@@ -458,7 +446,7 @@ private:
        /// typedef Buffer row_buffer_helper_t;
        /// not working? I get compiler error with MSVC10.
        /// read_stripped_data IS working.
-       typedef row_buffer_helper_view< View >           row_buffer_helper_t;
+       typedef detail::row_buffer_helper_view< View > row_buffer_helper_t;
 
        typedef typename row_buffer_helper_t::buffer_t   buffer_t;
        typedef typename row_buffer_helper_t::iterator_t it_t;
@@ -475,11 +463,7 @@ private:
        std::ptrdiff_t subimage_width  = this->_settings._dim.x;
        std::ptrdiff_t subimage_height = this->_settings._dim.y;
 
-       row_buffer_helper_t row_buffer_helper( _io_dev.get_tile_size(), true );
-
-       mirror_bits< buffer_t
-                  , typename is_bit_aligned< typename View::value_type >::type
-                  > mirror_bits( _io_dev.are_bytes_swapped() );
+       row_buffer_helper_t row_buffer_helper(this->_io_dev.get_tile_size(), true );
 
        for( unsigned int y = 0; y < image_height; y += tile_height )
        {
@@ -488,14 +472,12 @@ private:
                uint32_t current_tile_width  = ( x + tile_width  <  image_width ) ? tile_width  : image_width  - x;
                uint32_t current_tile_length = ( y + tile_height < image_height ) ? tile_height : image_height - y;
 
-               _io_dev.read_tile( row_buffer_helper.buffer()
+               this->_io_dev.read_tile( row_buffer_helper.buffer()
                                 , x
                                 , y
                                 , 0
                                 , static_cast< tsample_t >( plane )
                                 );
-
-               mirror_bits( row_buffer_helper.buffer() );
 
                // these are all whole image coordinates
                point_t tile_top_left   ( x, y );
@@ -588,7 +570,7 @@ private:
        /// typedef Buffer row_buffer_helper_t;
        /// not working? I get compiler error with MSVC10.
        /// read_stripped_data IS working.
-       typedef row_buffer_helper_view< View >           row_buffer_helper_t;
+       typedef detail::row_buffer_helper_view< View > row_buffer_helper_t;
 
        typedef typename row_buffer_helper_t::buffer_t   buffer_t;
        typedef typename row_buffer_helper_t::iterator_t it_t;
@@ -599,11 +581,7 @@ private:
        tiff_tile_width::type  tile_width  = this->_info._tile_width;
        tiff_tile_length::type tile_height = this->_info._tile_length;
 
-       row_buffer_helper_t row_buffer_helper( _io_dev.get_tile_size(), true );
-
-       mirror_bits< buffer_t
-                  , typename is_bit_aligned< typename View::value_type >::type
-                  > mirror_bits( _io_dev.are_bytes_swapped() );
+       row_buffer_helper_t row_buffer_helper(this->_io_dev.get_tile_size(), true );
 
        for( unsigned int y = 0; y < image_height; y += tile_height )
        {
@@ -612,14 +590,12 @@ private:
                uint32_t current_tile_width  = ( x + tile_width  <  image_width ) ? tile_width  : image_width  - x;
                uint32_t current_tile_length = ( y + tile_height < image_height ) ? tile_height : image_height - y;
 
-               _io_dev.read_tile( row_buffer_helper.buffer()
+               this->_io_dev.read_tile( row_buffer_helper.buffer()
                                 , x
                                 , y
                                 , 0
                                 , static_cast< tsample_t >( plane )
                                 );
-
-               mirror_bits( row_buffer_helper.buffer() );
 
                View dst_subimage_view = subimage_view( dst_view
                                                      , x
@@ -655,7 +631,7 @@ private:
    {
       typedef typename is_bit_aligned< typename View::value_type >::type is_view_bit_aligned_t;
 
-      //typedef row_buffer_helper_view< View > row_buffer_helper_t;
+      //typedef detail::row_buffer_helper_view< View > row_buffer_helper_t;
       typedef Buffer row_buffer_helper_t;
 
       typedef typename row_buffer_helper_t::buffer_t   buffer_t;
@@ -663,7 +639,7 @@ private:
 
       std::size_t size_to_allocate = buffer_size< typename View::value_type >( dst_view.width()
                                                                              , is_view_bit_aligned_t() );
-      row_buffer_helper_t row_buffer_helper( size_to_allocate, true );
+	  row_buffer_helper_t row_buffer_helper( size_to_allocate, true );
 
       it_t begin = row_buffer_helper.begin();
 
@@ -676,10 +652,6 @@ private:
                     , plane
                     );
 
-      mirror_bits< buffer_t
-                 , typename is_bit_aligned< View >::type
-                 > mirror_bits( _io_dev.are_bytes_swapped() );
-
       std::ptrdiff_t row     = this->_settings._top_left.y;
       std::ptrdiff_t row_end = row + this->_settings._dim.y;
       std::ptrdiff_t dst_row = 0;
@@ -689,12 +661,10 @@ private:
          ; ++row, ++dst_row
          )
       {
-         _io_dev.read_scanline( row_buffer_helper.buffer()
+         this->_io_dev.read_scanline( row_buffer_helper.buffer()
                               , row
                               , static_cast< tsample_t >( plane )
                               );
-
-         mirror_bits( row_buffer_helper.buffer() );
 
          this->_cc_policy.read( first
                               , last
@@ -702,33 +672,37 @@ private:
       }
    }
 
-   template< typename Pixel >
-   std::size_t buffer_size( std::size_t width
-                          , mpl::false_ // is_bit_aligned
-                          )
-   {
-      std::size_t scanline_size_in_bytes = _io_dev.get_scanline_size();
+    template< typename Pixel >
+    std::size_t buffer_size( std::size_t width
+                           , mpl::false_ // is_bit_aligned
+                           )
+    {
+        std::size_t scanline_size_in_bytes = this->_io_dev.get_scanline_size();
 
-      std::size_t element_size = sizeof( Pixel );
+        std::size_t element_size = sizeof( Pixel );
 
-      return  std::max( width
+        std::size_t ret = std::max( width
                       , (( scanline_size_in_bytes + element_size - 1 ) / element_size ));
-   }
 
-   template< typename Pixel >
-   std::size_t buffer_size( std::size_t /* width */
-                          , mpl::true_  // is_bit_aligned
-                          )
-   {
-      return _io_dev.get_scanline_size();
-   }
+        //assert( this->_scanline_length == ret );
+
+        return ret;
+    }
+
+    template< typename Pixel >
+    std::size_t buffer_size( std::size_t /* width */
+                            , mpl::true_  // is_bit_aligned
+                            )
+    {
+        return this->_io_dev.get_scanline_size();
+    }
 
 private:
 
-   Device& _io_dev;
-
    template < int K > friend struct plane_recursion;
 };
+
+namespace detail {
 
 struct tiff_type_format_checker
 {
@@ -747,8 +721,11 @@ struct tiff_type_format_checker
     }
 
 private:
+    tiff_type_format_checker& operator=( const tiff_type_format_checker& ) { return *this; }
 
-    const image_read_info< tiff_tag >& _info;
+private:
+
+    const image_read_info< tiff_tag > _info;
 };
 
 struct tiff_read_is_supported
@@ -760,8 +737,13 @@ struct tiff_read_is_supported
     {};
 };
 
-template< typename Device
-        >
+} // namespace detail
+
+
+///
+/// Tiff Dynamic Image Reader
+///
+template< typename Device >
 class dynamic_image_reader< Device
                           , tiff_tag
                           >
@@ -777,10 +759,10 @@ class dynamic_image_reader< Device
 
 public:
 
-    dynamic_image_reader( Device&                                device
+    dynamic_image_reader( const Device&                          io_dev
                         , const image_read_settings< tiff_tag >& settings
                         )
-    : parent_t( device
+    : parent_t( io_dev
               , settings
               )
     {}
@@ -788,7 +770,7 @@ public:
     template< typename Images >
     void apply( any_image< Images >& images )
     {
-        tiff_type_format_checker format_checker( this->_info );
+        detail::tiff_type_format_checker format_checker( this->_info );
 
         if( !construct_matched( images
                               , format_checker
@@ -799,12 +781,12 @@ public:
         else
         {
             init_image( images
-                      , this->_info
+                      , this->_settings
                       );
 
-            dynamic_io_fnobj< tiff_read_is_supported
-                            , parent_t
-                            > op( this );
+            detail::dynamic_io_fnobj< detail::tiff_read_is_supported
+                                    , parent_t
+                                    > op( this );
 
             apply_operation( view( images )
                            , op
@@ -813,8 +795,10 @@ public:
     }
 };
 
+#if BOOST_WORKAROUND(BOOST_MSVC, >= 1400) 
+#pragma warning(pop) 
+#endif 
 
-} // namespace detail
 } // namespace gil
 } // namespace boost
 

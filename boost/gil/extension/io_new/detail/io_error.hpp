@@ -19,7 +19,7 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
 
-namespace boost { namespace gil { namespace detail {
+namespace boost { namespace gil {
 
 inline 
 void io_error( const char* descr )
@@ -34,7 +34,6 @@ void io_error_if( bool expr, const char* descr )
       io_error( descr );
 }
 
-} // namespace detail
 } // namespace gil
 } // namespace boost
 

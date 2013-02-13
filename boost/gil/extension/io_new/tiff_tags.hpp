@@ -22,19 +22,11 @@
 // taken from jpegxx - https://bitbucket.org/edd/jpegxx/src/ea2492a1a4a6/src/ijg_headers.hpp
 #ifndef BOOST_GIL_EXTENSION_IO_TIFF_C_LIB_COMPILED_AS_CPLUSPLUS
     extern "C" {
-#else
-    // DONT_USE_EXTERN_C introduced in v7 of the IJG library.
-    // By default the v7 IJG headers check for __cplusplus being defined and
-    // wrap the content in an 'extern "C"' block if it's present.
-    // When DONT_USE_EXTERN_C is defined, this wrapping is not performed.
-    #ifndef DONT_USE_EXTERN_C
-        #define DONT_USE_EXTERN_C 1
-    #endif
 #endif
 
 #include <tiff.h>
 
-#ifndef BOOST_GIL_EXTENSION_IO_JPEG_C_LIB_COMPILED_AS_CPLUSPLUS
+#ifndef BOOST_GIL_EXTENSION_IO_TIFF_C_LIB_COMPILED_AS_CPLUSPLUS
     }
 #endif
 
@@ -283,7 +275,9 @@ struct image_write_info< tiff_tag, Log >
 {
     /// Default constructor
     image_write_info()
-    : _photometric_interpretation( PHOTOMETRIC_MINISBLACK )
+    : _photometric_interpretation             ( PHOTOMETRIC_MINISBLACK )
+    , _photometric_interpretation_user_defined( false                  )
+
     , _compression               ( COMPRESSION_NONE       )
     , _orientation               ( ORIENTATION_TOPLEFT    )
     , _planar_configuration      ( PLANARCONFIG_CONTIG    )
@@ -296,6 +290,8 @@ struct image_write_info< tiff_tag, Log >
 
     /// The color space of the image data.
     tiff_photometric_interpretation::type _photometric_interpretation;
+    bool                                  _photometric_interpretation_user_defined;
+
     /// Compression scheme used on the image data.
     tiff_compression::type                _compression;
     /// The orientation of the image with respect to the rows and columns.

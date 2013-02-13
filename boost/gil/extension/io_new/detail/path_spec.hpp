@@ -15,12 +15,15 @@
 /// \brief
 /// \author Andreas Pokorny, Christian Henning \n
 ///
-/// \date   2007-2008 \n
+/// \date   2007-2012 \n
 ///
 ////////////////////////////////////////////////////////////////////////////////////////
 
-#include <cstdlib>
+#if !defined(__APPLE__)
 #include <malloc.h>
+#endif
+
+#include <cstdlib>
 #include <string>
 
 #include <boost/mpl/bool_fwd.hpp>
@@ -30,20 +33,32 @@
 #include <boost/filesystem/path.hpp>
 #endif // BOOST_GIL_IO_ADD_FS_PATH_SUPPORT
 
-namespace boost{ namespace gil{ namespace detail{
+namespace boost { namespace gil { namespace detail {
 
-template<typename P> struct is_supported_path_spec       : mpl::false_ {};
-template<> struct is_supported_path_spec< std::string >  : mpl::true_ {};
-template<> struct is_supported_path_spec< std::wstring > : mpl::true_ {};
-template<> struct is_supported_path_spec< const char* >  : mpl::true_ {};
-template<> struct is_supported_path_spec< char* >        : mpl::true_ {};
+template<typename P> struct is_supported_path_spec              : mpl::false_ {};
+template<> struct is_supported_path_spec< std::string >         : mpl::true_ {};
+template<> struct is_supported_path_spec< const std::string >   : mpl::true_ {};
+template<> struct is_supported_path_spec< std::wstring >        : mpl::true_ {};
+template<> struct is_supported_path_spec< const std::wstring >  : mpl::true_ {};
+template<> struct is_supported_path_spec< const char* >         : mpl::true_ {};
+template<> struct is_supported_path_spec< char* >               : mpl::true_ {};
+template<> struct is_supported_path_spec< const wchar_t* >      : mpl::true_ {};
+template<> struct is_supported_path_spec< wchar_t* >            : mpl::true_ {};
 
-template<int i> struct is_supported_path_spec<const char [i]> : mpl::true_ {};
-template<int i> struct is_supported_path_spec<char [i]> : mpl::true_ {};
+template<int i> struct is_supported_path_spec<const char [i]>       : mpl::true_ {};
+template<int i> struct is_supported_path_spec<char [i]>             : mpl::true_ {};
+template<int i> struct is_supported_path_spec<const wchar_t [i]>    : mpl::true_ {};
+template<int i> struct is_supported_path_spec<wchar_t [i]>          : mpl::true_ {};
 
 #ifdef BOOST_GIL_IO_ADD_FS_PATH_SUPPORT
 template<> struct is_supported_path_spec< filesystem::path > : mpl::true_ {};
+template<> struct is_supported_path_spec< const filesystem::path > : mpl::true_ {};
 #endif // BOOST_GIL_IO_ADD_FS_PATH_SUPPORT
+
+
+///
+/// convert_to_string
+///
 
 inline std::string convert_to_string( std::string const& obj)
 {
@@ -56,7 +71,7 @@ inline std::string convert_to_string( std::wstring const& s )
 	char* c = reinterpret_cast<char*>( alloca( len ));
 	wcstombs( c, s.c_str(), len );
 
-   return std::string( c, c + len );
+    return std::string( c, c + len );
 }
 
 inline std::string convert_to_string( const char* str )
@@ -76,6 +91,45 @@ inline std::string convert_to_string( const filesystem::path& path )
 }
 #endif // BOOST_GIL_IO_ADD_FS_PATH_SUPPORT
 
-}}}
+///
+/// convert_to_native_string
+///
+
+inline const char* convert_to_native_string( char* str )
+{
+    return str;
+}
+
+inline const char* convert_to_native_string( const char* str )
+{
+    return str;
+}
+
+inline const char* convert_to_native_string( const std::string& str )
+{
+   return str.c_str();
+}
+
+inline const char* convert_to_native_string( const wchar_t* str )
+{
+    std::size_t len = wcslen( str ) + 1;
+    char* c = new char[len];
+    wcstombs( c, str, len );
+
+    return c;
+}
+
+inline const char* convert_to_native_string( const std::wstring& str )
+{
+    std::size_t len = wcslen( str.c_str() ) + 1;
+    char* c = new char[len];
+    wcstombs( c, str.c_str(), len );
+
+    return c;
+}
+
+} // namespace detail
+} // namespace gil
+} // namespace boost
 
 #endif // BOOST_GIL_EXTENSION_IO_DETAIL_PATH_SPEC_HPP

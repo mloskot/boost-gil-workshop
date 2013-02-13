@@ -32,6 +32,11 @@ struct mirror_bits
    mirror_bits( bool ) {}
 
    void operator() ( Buffer& ) {}
+
+
+    void operator() ( byte_t* , std::size_t )
+    {
+    }
 };
 
 
@@ -66,11 +71,20 @@ struct mirror_bits< Buffer
                                                , mpl::true_
                                                >::lookup
                                  , *this
-                                 , _1
+                                 , ::_1
                                  )
                     );
         }
    }
+
+    void operator() ( byte_t* dst, std::size_t size )
+    {
+        for( std::size_t i = 0; i < size; ++i )
+        {
+            lookup(*dst);
+            ++dst;
+        }
+    }
 
 private:
 
@@ -120,6 +134,15 @@ struct negate_bits< Buffer, mpl::true_ >
                 );
     }
 
+    void operator() ( byte_t* dst, std::size_t size )
+    {
+        for( std::size_t i = 0; i < size; ++i )
+        {
+            negate(*dst);
+            ++dst;
+        }
+    }
+
 private:
 
     static void negate( byte_t& b )
@@ -150,6 +173,16 @@ struct swap_half_bytes< Buffer
                 , swap_half_bytes< Buffer, mpl::true_ >::swap
                 );
     }
+
+    void operator() ( byte_t* dst, std::size_t size )
+    {
+        for( std::size_t i = 0; i < size; ++i )
+        {
+            swap(*dst);
+            ++dst;
+        }
+    }
+
 
 private:
 
