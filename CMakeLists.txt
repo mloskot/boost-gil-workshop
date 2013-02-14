@@ -57,5 +57,5 @@ if(MSVC)
   list(APPEND GIL_ALL_HPP ${GIL_EXT_IO_FORMATS_TIFF_HPP})
 endif()
 
-# Configure test programs, also adds the collected headers
-add_subdirectory(test)
+# Configure sample programs, also adds the collected headers
+add_subdirectory(examples)
