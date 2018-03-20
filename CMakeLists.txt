@@ -56,7 +56,7 @@ endif()
 
 set(gil_samples
   read_image_pnm
-  tile_mosaic)
+  stitch_image_tiles)
 
 foreach(sample IN ITEMS ${gil_samples})
   message(STATUS "Building sample: ${sample}")
