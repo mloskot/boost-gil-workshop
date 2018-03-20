@@ -60,16 +60,18 @@ int main()
 {
     try
     {
-        //std::string const tiles_dir = "f:\\tmp\\tiles\\osm-2x2";
-        std::string const tiles_dir = "f:\\tmp\\tiles\\osm-4x4";
+        auto const tiles_path = fs::canonical(fs::path(__FILE__).parent_path()) / fs::path("images") / "osm";
+        auto const tiles2x2_path = tiles_path / "4x4";
+        auto const tiles4x4_path = tiles_path / "4x4";
+        auto const current_tiles_path = tiles4x4_path;
 
         tiles_t tiles;
         {
-            benchmark bench{"find tiles"};
-            for (auto& f : fs::directory_iterator(tiles_dir))
+            benchmark bench{"collect tiles"};
+            for (auto& f : fs::directory_iterator(current_tiles_path.string()))
             {
                 auto n = f.path().filename().string();
-                if (n.substr(n.size() - 3) != "dib")
+                if (n.substr(n.size() - 3) != "hex")
                     continue;
 
                 int x, y, w, h;
@@ -91,8 +93,9 @@ int main()
             gil::fill_pixels(mosaic_view, 255);
         }
         {
-            benchmark bench{"write blank"};
-            gil::write_view(tiles_dir + "\\mosaic-blank.png", mosaic_view, gil::png_tag());
+            auto const out = current_tiles_path / "mosaic-blank.png";
+            benchmark bench{"dump " + out.string()};
+            gil::write_view(out.string(), mosaic_view, gil::png_tag());
         }
         {
             benchmark bench{"merge mosaic total"};
@@ -104,12 +107,12 @@ int main()
                 auto dib = read_tile_dib(t);
                 auto tile_view = make_interleaved_view<gil::gray8_pixel_t>(w, h, &dib[0], w);
                 {
-                    auto png = std::get<0>(t) + ".png";
-                    benchmark bench{"write " + png};
-                    gil::write_view(png, tile_view, gil::png_tag());
+                    auto out = std::get<0>(t) + ".png";
+                    benchmark bench{"dump " + out};
+                    gil::write_view(out, tile_view, gil::png_tag());
                 }
                 {
-                    benchmark bench{"copy pixels from" + std::get<0>(t)};
+                    benchmark bench{"copy" + std::get<0>(t)};
                     gil::copy_pixels(
                         gil::subimage_view(tile_view, 0, 0, w, h),
                         gil::subimage_view(mosaic_view, x * w, y * h, w, h));
@@ -117,9 +120,9 @@ int main()
             }
         }
         {
-            auto png = tiles_dir + "\\mosaic-tiles.png";
-            benchmark bench{ "write " + png };
-            gil::write_view(png, mosaic_view, gil::png_tag());
+            auto const out = current_tiles_path / "mosaic-tiles.png";
+            benchmark bench{"dump " + out.string()};
+            gil::write_view(out.string(), mosaic_view, gil::png_tag());
         }
     }
     catch (std::exception const& e)

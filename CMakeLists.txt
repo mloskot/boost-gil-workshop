@@ -63,7 +63,7 @@ foreach(sample IN ITEMS ${gil_samples})
   add_executable(${sample} ${sample}.cpp)
   if(MSVC)
     string(REGEX REPLACE "/W3" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-    target_compile_options(${sample} PRIVATE -W4)
+    target_compile_options(${sample} PRIVATE -W4 -FC) # We need absolute path in __FILE__
     target_compile_definitions(${sample} PRIVATE _CRT_NONSTDC_NO_DEPRECATE=1)
     target_compile_definitions(${sample} PRIVATE _SCL_SECURE_NO_DEPRECATE=1)
     target_compile_definitions(${sample} PRIVATE _CRT_SECURE_NO_WARNINGS=1)
