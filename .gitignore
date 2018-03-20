@@ -1,3 +1,4 @@
 /.vs*
 /*build*
 /images/osm/**/*.png
+/CMakeSettings.json
