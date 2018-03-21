@@ -46,6 +46,13 @@ int main()
         assert(p01[0] == 255 && p01[1] == 0 && p01[2] == 0);
         auto p11 = ii(point_t(1, 1));
         assert(p11[0] == 0 && p11[1] == 0 && p11[2] == 255);
+
+        using locator_t = indexed_image_locator_type<gray8_image_t::const_view_t::xy_locator, rgb8_image_t::const_view_t::xy_locator>::type;
+        using indexed_image_view_t = indexed_image_view<locator_t>;
+        locator_t locator{point_t{0, 0}, point_t{1, 1}, ii};
+        indexed_image_view_t ii_view{{2, 2}, 2, locator};
+
+
     }
     catch (std::exception const& e)
     {
