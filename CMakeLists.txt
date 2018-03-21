@@ -55,6 +55,7 @@ else()
 endif()
 
 set(gil_samples
+  indexed_image_raw
   read_image_pnm
   stitch_image_tiles)
 
