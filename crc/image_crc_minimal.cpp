@@ -50,12 +50,12 @@ struct image_test
     }
 
     template <typename Img>
-    void basic_test(std::ptrdiff_t w, std::ptrdiff_t h)
+    void basic_test(typename Img::point_t const& dims)
     {
         using view_value_t = typename Img::view_t::value_type;
 
-        // make a 20x20 image
-        Img img({2, 2});
+        // make empty image
+        Img img(dims);
         auto const& img_view = view(img);
         //check_view(img_view, "make"); // possibly random garbage
 
@@ -85,24 +85,38 @@ struct image_test
     }
 };
 
+#ifdef NDEBUG
+auto const log_suffix = "_opt";
+#else
+auto const log_suffix = "_dbg";
+#endif
+
 int main()
 {
     try
     {
         using bgr121_ref_t = const bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 1, 2, 1>, bgr_layout_t, true>;
         using bgr121_image_t = image<bgr121_ref_t, false>;
+        using dims_t = bgr121_image_t::point_t;
 
         auto const this_path = fs::canonical(fs::path(__FILE__).parent_path());
+
         auto const max_dim = 10;
-        for (int i = 2; i < max_dim + 2; i += 2)
+        for (int i = 2; i < max_dim + 1; i += 1)
         {
             auto const log_path = this_path / fs::path("test_");
             std::ostringstream os;
-            os << log_path << "_" << i << "x" << i << ".log";
+            os << log_path << "_" << i << "x" << i << log_suffix << ".log";
+            auto log = os.str();
 
-            std::ofstream ofs(os.str());
+            // if (i == 5) may randomly crash in opt!
+
+            // test
+            std::ofstream ofs(log );
+            std::cerr << log << std::endl;
             image_test test(ofs);
-            test.basic_test<bgr121_image_t>(i, i);
+            dims_t dims(i, i);
+            test.basic_test<bgr121_image_t>(dims);
         }
     }
     catch (std::runtime_error const& e)
