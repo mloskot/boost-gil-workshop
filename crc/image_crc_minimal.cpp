@@ -90,7 +90,7 @@ auto const config_suffix = "opt";
 #else
 auto const config_suffix = "dbg";
 #endif
-#ifdef WIN64
+#ifdef _WIN64
 auto const arch_suffix = "x64";
 #else
 auto const arch_suffix = "x32";
