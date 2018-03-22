@@ -71,7 +71,7 @@ struct image_test
         color_convert(white8, white);
 
         // fill it with red
-        fill(img_view.begin(), img_view.end(), white);
+        fill(img_view.begin(), img_view.end(), red);
         check_view(img_view, "red  fill");
 
         // draw a blue line along the diagonal
@@ -105,8 +105,8 @@ int main()
     {
         auto const this_path = fs::canonical(fs::path(__FILE__).parent_path());
 
-        auto const max_dim = 3; // modify if you need
-        for (int i = 3; i < max_dim + 1; i += 1)
+        auto const max_dim = 8; // modify if you need
+        for (int i = 2; i < max_dim + 1; i += 1)
         {
             auto const log_path = this_path / fs::path("test_");
             std::ostringstream os;
@@ -128,8 +128,8 @@ int main()
         std::cerr << e.what() << std::endl;
     }
 
-    //std::string out("type & ENTER ");
-    //std::cerr << out;
-    //std::cin >> out;
+    std::string out("type & ENTER ");
+    std::cerr << out;
+    std::cin >> out;
     return 0;
 }
