@@ -50,12 +50,12 @@ struct image_test
     }
 
     template <typename Img>
-    void basic_test()
+    void basic_test(std::ptrdiff_t w, std::ptrdiff_t h)
     {
         using view_value_t = typename Img::view_t::value_type;
 
         // make a 20x20 image
-        Img img({20, 20});
+        Img img({2, 2});
         auto const& img_view = view(img);
         //check_view(img_view, "make"); // possibly random garbage
 
@@ -89,15 +89,20 @@ int main()
 {
     try
     {
-        auto const this_path = fs::canonical(fs::path(__FILE__).parent_path());
-        auto const log_path = this_path / fs::path("last.log");
-        {
-            std::ofstream ofs(log_path);
-            image_test test(ofs);
+        using bgr121_ref_t = const bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 1, 2, 1>, bgr_layout_t, true>;
+        using bgr121_image_t = image<bgr121_ref_t, false>;
 
-            using bgr121_ref_t = const bit_aligned_pixel_reference<boost::uint8_t,boost::mpl::vector3_c<int, 1, 2, 1>, bgr_layout_t, true>;
-            using bgr121_image_t = image<bgr121_ref_t, false>;
-            test.basic_test<bgr121_image_t>();
+        auto const this_path = fs::canonical(fs::path(__FILE__).parent_path());
+        auto const max_dim = 10;
+        for (int i = 2; i < max_dim + 2; i += 2)
+        {
+            auto const log_path = this_path / fs::path("test_");
+            std::ostringstream os;
+            os << log_path << "_" << i << "x" << i << ".log";
+
+            std::ofstream ofs(os.str());
+            image_test test(ofs);
+            test.basic_test<bgr121_image_t>(i, i);
         }
     }
     catch (std::runtime_error const& e)
