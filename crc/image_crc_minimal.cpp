@@ -86,14 +86,14 @@ struct image_test
 };
 
 #ifdef NDEBUG
-auto const config_suffix = "_opt";
+auto const config_suffix = "opt";
 #else
-auto const config_suffix = "_dbg";
+auto const config_suffix = "dbg";
 #endif
 #ifdef WIN64
-auto const arch_suffix = "_x64";
+auto const arch_suffix = "x64";
 #else
-auto const arch_suffix = "_x32";
+auto const arch_suffix = "x32";
 #endif
 
 int main()
@@ -106,15 +106,15 @@ int main()
 
         auto const this_path = fs::canonical(fs::path(__FILE__).parent_path());
 
-        auto const max_dim = 10; // modify if you need
+        auto const max_dim = 8; // modify if you need
         for (int i = 2; i < max_dim + 1; i += 1)
         {
             auto const log_path = this_path / fs::path("test_");
             std::ostringstream os;
-            os << log_path << i << "x" << i << config_suffix << "_" << arch_suffix << ".log";
+            os << log_path << i << "x" << i << "_" << arch_suffix << "_" << config_suffix << ".log";
             auto log = os.str();
 
-            // if (i == 5) may crash in opt, randomly!
+            // if (i == 5) may randomly crash in opt, in gil::image<..>::deallocate
 
             // test
             std::ofstream ofs(log );
