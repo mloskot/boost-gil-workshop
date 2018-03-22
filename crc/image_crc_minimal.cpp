@@ -1,8 +1,10 @@
 #define BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
+#ifdef _MSC_VER
 #pragma warning(disable:4244)
 #pragma warning(disable:4503)
 #pragma warning(disable:4714)
 #pragma warning(disable:4996)
+#endif
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -10,9 +12,9 @@
 #include <vector>
 #include <boost/algorithm/hex.hpp>
 #include <boost/crc.hpp>
-#include <boost/mpl/vector.hpp>
 #include <boost/gil/gil_all.hpp>
 #include <boost/gil/extension/dynamic_image/dynamic_image_all.hpp>
+#include <boost/mpl/vector.hpp>
 using namespace std;
 using namespace boost::gil;
 namespace fs = std::experimental::filesystem;
@@ -90,7 +92,7 @@ auto const config_suffix = "opt";
 #else
 auto const config_suffix = "dbg";
 #endif
-#ifdef _WIN64
+#if defined(_WIN64) || defined(__x86_64__) || defined(__LLP64__) || (UINTPTR_MAX == 0xffffffffffffffffULL)
 auto const arch_suffix = "x64";
 #else
 auto const arch_suffix = "x32";
