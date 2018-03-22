@@ -106,7 +106,7 @@ int main()
         {
             auto const log_path = this_path / fs::path("test_");
             std::ostringstream os;
-            os << log_path << "_" << i << "x" << i << log_suffix << ".log";
+            os << log_path << i << "x" << i << log_suffix << ".log";
             auto log = os.str();
 
             // if (i == 5) may randomly crash in opt!
