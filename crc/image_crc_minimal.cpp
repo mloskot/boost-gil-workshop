@@ -86,9 +86,14 @@ struct image_test
 };
 
 #ifdef NDEBUG
-auto const log_suffix = "_opt";
+auto const config_suffix = "_opt";
 #else
-auto const log_suffix = "_dbg";
+auto const config_suffix = "_dbg";
+#endif
+#ifdef WIN64
+auto const arch_suffix = "_x64";
+#else
+auto const arch_suffix = "_x32";
 #endif
 
 int main()
@@ -106,7 +111,7 @@ int main()
         {
             auto const log_path = this_path / fs::path("test_");
             std::ostringstream os;
-            os << log_path << i << "x" << i << log_suffix << ".log";
+            os << log_path << i << "x" << i << config_suffix << "_" << arch_suffix << ".log";
             auto log = os.str();
 
             // if (i == 5) may crash in opt, randomly!
