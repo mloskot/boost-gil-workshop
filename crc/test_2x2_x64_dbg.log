@@ -18,3 +18,7 @@ Checksum (bgr233: red  fill):	1435fe20   <- rgb8
 230000230000230000230000
 Checksum (bgr233: blue line):	62427b1f   <- rgb8
 2300000000FF0000FF230000
+Checksum (bgr888: red  fill):	5edf2460   <- rgb8
+FF0000FF0000FF0000FF0000
+Checksum (bgr888: blue line):	bf67cf26   <- rgb8
+FF00000000FF0000FFFF0000

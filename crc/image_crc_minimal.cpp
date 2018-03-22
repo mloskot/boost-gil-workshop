@@ -116,6 +116,10 @@ int main()
         using bgr233_img_t = image<
             bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 2, 3, 3>, bgr_layout_t, true> const, false>;
 
+        // size-equivalent of regular RGB8 (the fact it uses BGR layout should not matter).
+        using bgr888_img_t = image<
+            bit_aligned_pixel_reference<boost::uint32_t, boost::mpl::vector3_c<int, 8, 8, 8>, bgr_layout_t, true> const, false>;
+
         auto const max_dim = 6; // modify if you need
         for (int i = 2; i < max_dim + 1; i += 1)
         {
@@ -128,6 +132,8 @@ int main()
             test.bit_aligned_pixel_image_test<bgr222_img_t>({i, i}, "bgr222");
             test.bit_aligned_pixel_image_test<bgr232_img_t>({i, i}, "bgr232");
             test.bit_aligned_pixel_image_test<bgr233_img_t>({i, i}, "bgr233");
+            // check case: this variant must produce consistent checksum within image size (ie. 2x2, 3x3, ...)
+            test.bit_aligned_pixel_image_test<bgr888_img_t>({i, i}, "bgr888");
         }
     }
     catch (std::runtime_error const& e)
