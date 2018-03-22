@@ -50,13 +50,15 @@ struct image_test
         print_view_hex(const_view(rgb_img));
     }
 
-    template <typename Img>
-    void basic_test(typename Img::point_t const& dims)
+    using bgr121_ref_t = const bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 1, 2, 1>, bgr_layout_t, true>;
+    using bgr121_image_t = image<bgr121_ref_t, false>;
+
+    void bgr121_image_test(typename bgr121_image_t::point_t const& dims)
     {
-        using view_value_t = typename Img::view_t::value_type;
+        using view_value_t = typename bgr121_image_t::view_t::value_type;
 
         // make empty image
-        Img img(dims);
+        bgr121_image_t img(dims);
         auto const& img_view = view(img);
         //check_view(img_view, "make"); // possibly random garbage
 
@@ -69,7 +71,7 @@ struct image_test
         color_convert(white8, white);
 
         // fill it with red
-        fill(img_view.begin(), img_view.end(), red);
+        fill(img_view.begin(), img_view.end(), white);
         check_view(img_view, "red  fill");
 
         // draw a blue line along the diagonal
@@ -101,14 +103,10 @@ int main()
 {
     try
     {
-        using bgr121_ref_t = const bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 1, 2, 1>, bgr_layout_t, true>;
-        using bgr121_image_t = image<bgr121_ref_t, false>;
-        using dims_t = bgr121_image_t::point_t;
-
         auto const this_path = fs::canonical(fs::path(__FILE__).parent_path());
 
-        auto const max_dim = 8; // modify if you need
-        for (int i = 2; i < max_dim + 1; i += 1)
+        auto const max_dim = 3; // modify if you need
+        for (int i = 3; i < max_dim + 1; i += 1)
         {
             auto const log_path = this_path / fs::path("test_");
             std::ostringstream os;
@@ -121,8 +119,8 @@ int main()
             std::ofstream ofs(log );
             std::cerr << log << std::endl;
             image_test test(ofs);
-            dims_t dims(i, i);
-            test.basic_test<bgr121_image_t>(dims);
+
+            test.bgr121_image_test({i, i});
         }
     }
     catch (std::runtime_error const& e)
