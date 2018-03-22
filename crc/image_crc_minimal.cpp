@@ -18,17 +18,28 @@ using namespace std;
 using namespace boost::gil;
 namespace fs = std::experimental::filesystem;
 
+#ifdef NDEBUG
+auto const config_suffix = "opt";
+#else
+auto const config_suffix = "dbg";
+#endif
+#if defined(_WIN64) || defined(__x86_64__) || defined(__LLP64__) || (UINTPTR_MAX == 0xffffffffffffffffULL)
+auto const arch_suffix = "x64";
+#else
+auto const arch_suffix = "x32";
+#endif
+
 struct image_test
 {
-    std::ostream& log_;
-    image_test(std::ostream& os) : log_(os) {}
+    std::ofstream log_;
+    image_test(std::string const& path) : log_(path) { cout << path << endl; }
 
     void print_checksum(const rgb8c_view_t& img_view, const string& name)
     {
         boost::crc_32_type checksum_acumulator;
         checksum_acumulator.process_bytes(img_view.row_begin(0), img_view.size() * 3);
-        cerr << "Checksum (" << name << "):\t\t" << std::hex << checksum_acumulator.checksum() << endl;
-        log_ << "Checksum (" << name << "):\t\t" << std::hex << checksum_acumulator.checksum() << endl;
+        cout << "Checksum (" << name << "):\t" << std::hex << checksum_acumulator.checksum() << "   <- rgb8" << endl;
+        log_ << "Checksum (" << name << "):\t" << std::hex << checksum_acumulator.checksum() << "   <- rgb8" << endl;
     }
 
     void print_view_hex(const rgb8c_view_t& img_view)
@@ -50,21 +61,19 @@ struct image_test
         print_view_hex(const_view(rgb_img));
     }
 
-    using bgr121_ref_t = const bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 1, 2, 1>, bgr_layout_t, true>;
-    using bgr121_image_t = image<bgr121_ref_t, false>;
-
-    void bgr121_image_test(typename bgr121_image_t::point_t const& dims)
+    template <typename Image>
+    void bit_aligned_pixel_image_test(typename Image::point_t const& dims, std::string const& bgr_suffix)
     {
-        using view_value_t = typename bgr121_image_t::view_t::value_type;
+        std::cout << "----------" << bgr_suffix << "----------" << endl;
 
         // make empty image
-        bgr121_image_t img(dims);
+        Image img(dims);
         auto const& img_view = view(img);
         //check_view(img_view, "make"); // possibly random garbage
 
         // colors
         rgb8_pixel_t red8(255, 0, 0), green8(0, 255, 0), blue8(0, 0, 255), white8(255, 255, 255);
-        view_value_t red, green, blue, white;
+        typename Image::view_t::value_type red, green, blue, white;
         color_convert(red8, red);
         color_convert(green8, green);
         color_convert(blue8, blue);
@@ -72,7 +81,7 @@ struct image_test
 
         // fill it with red
         fill(img_view.begin(), img_view.end(), red);
-        check_view(img_view, "red  fill");
+        check_view(img_view, bgr_suffix +": red  fill");
 
         // draw a blue line along the diagonal
         {
@@ -81,46 +90,44 @@ struct image_test
             {
                 *loc = blue;
                 ++loc.x();
-                loc.y()--;
+                --loc.y();
             }
-            check_view(img_view, "blue line");
+            check_view(img_view, bgr_suffix +": blue line");
         }
     }
 };
 
-#ifdef NDEBUG
-auto const config_suffix = "opt";
-#else
-auto const config_suffix = "dbg";
-#endif
-#if defined(_WIN64) || defined(__x86_64__) || defined(__LLP64__) || (UINTPTR_MAX == 0xffffffffffffffffULL)
-auto const arch_suffix = "x64";
-#else
-auto const arch_suffix = "x32";
-#endif
-
+// XXX: for some images eg. 5x5, may often randomly crash in opt, in gil::image<..>::deallocate
 int main()
 {
     try
     {
         auto const this_path = fs::canonical(fs::path(__FILE__).parent_path());
+        auto const log_base_path = this_path / fs::path("test_");
 
-        auto const max_dim = 8; // modify if you need
+        using bgr111_img_t = image<
+            bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 1, 1, 1>, bgr_layout_t, true> const, false>;
+        using bgr121_img_t = image<
+            bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 1, 2, 1>, bgr_layout_t, true> const, false>;
+        using bgr222_img_t = image<
+            bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 2, 2, 2>, bgr_layout_t, true> const, false>;
+        using bgr232_img_t = image<
+            bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 2, 3, 2>, bgr_layout_t, true> const, false>;
+        using bgr233_img_t = image<
+            bit_aligned_pixel_reference<boost::uint8_t, boost::mpl::vector3_c<int, 2, 3, 3>, bgr_layout_t, true> const, false>;
+
+        auto const max_dim = 6; // modify if you need
         for (int i = 2; i < max_dim + 1; i += 1)
         {
-            auto const log_path = this_path / fs::path("test_");
             std::ostringstream os;
-            os << log_path << i << "x" << i << "_" << arch_suffix << "_" << config_suffix << ".log";
-            auto log = os.str();
+            os << log_base_path << i << "x" << i << "_" << arch_suffix << "_" << config_suffix << ".log";
+            image_test test(os.str());
 
-            // if (i == 5) may randomly crash in opt, in gil::image<..>::deallocate
-
-            // test
-            std::ofstream ofs(log );
-            std::cerr << log << std::endl;
-            image_test test(ofs);
-
-            test.bgr121_image_test({i, i});
+            test.bit_aligned_pixel_image_test<bgr111_img_t>({i, i}, "bgr111");
+            test.bit_aligned_pixel_image_test<bgr121_img_t>({i, i}, "bgr121");
+            test.bit_aligned_pixel_image_test<bgr222_img_t>({i, i}, "bgr222");
+            test.bit_aligned_pixel_image_test<bgr232_img_t>({i, i}, "bgr232");
+            test.bit_aligned_pixel_image_test<bgr233_img_t>({i, i}, "bgr233");
         }
     }
     catch (std::runtime_error const& e)
@@ -129,7 +136,7 @@ int main()
     }
 
     std::string out("type & ENTER ");
-    std::cerr << out;
+    std::cout << out;
     std::cin >> out;
     return 0;
 }
