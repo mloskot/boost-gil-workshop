@@ -96,3 +96,5 @@ foreach(sample IN ITEMS ${gil_samples})
       target_include_directories(${sample} PRIVATE ${JPEG_INCLUDE_DIR})
   endif()
 endforeach()
+
+add_subdirectory(crc)
