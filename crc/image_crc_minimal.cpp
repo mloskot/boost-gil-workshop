@@ -13,7 +13,6 @@
 #include <boost/algorithm/hex.hpp>
 #include <boost/crc.hpp>
 #include <boost/gil/gil_all.hpp>
-#include <boost/gil/extension/dynamic_image/dynamic_image_all.hpp>
 #include <boost/mpl/vector.hpp>
 using namespace std;
 using namespace boost::gil;
