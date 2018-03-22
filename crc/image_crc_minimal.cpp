@@ -101,7 +101,7 @@ int main()
 
         auto const this_path = fs::canonical(fs::path(__FILE__).parent_path());
 
-        auto const max_dim = 10;
+        auto const max_dim = 10; // modify if you need
         for (int i = 2; i < max_dim + 1; i += 1)
         {
             auto const log_path = this_path / fs::path("test_");
@@ -109,7 +109,7 @@ int main()
             os << log_path << i << "x" << i << log_suffix << ".log";
             auto log = os.str();
 
-            // if (i == 5) may randomly crash in opt!
+            // if (i == 5) may crash in opt, randomly!
 
             // test
             std::ofstream ofs(log );
