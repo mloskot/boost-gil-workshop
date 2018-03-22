@@ -1,7 +1,11 @@
 set(gil_crc_samples
-  image_crc)
+  image_crc
+  image_crc_minimal
+  test_boost_crc)
 
 add_executable(image_crc image_crc.cpp sample_image.cpp)
+add_executable(image_crc_minimal image_crc_minimal.cpp)
+add_executable(test_boost_crc test_boost_crc.cpp)
 
 foreach(sample IN ITEMS ${gil_crc_samples})
   message(STATUS "Building sample: ${sample}")
