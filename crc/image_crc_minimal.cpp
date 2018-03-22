@@ -124,8 +124,8 @@ int main()
         std::cerr << e.what() << std::endl;
     }
 
-    std::string out("type & ENTER ");
-    std::cerr << out;
-    std::cin >> out;
+    //std::string out("type & ENTER ");
+    //std::cerr << out;
+    //std::cin >> out;
     return 0;
 }
