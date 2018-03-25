@@ -9,10 +9,12 @@
 #include <tuple>
 #include <boost/algorithm/hex.hpp>
 #include <boost/gil/gil_all.hpp>
+//#include <boost/gil/extension/toolbox/image_types/indexed_image.hpp>
+#include <boost/gil/extension/toolbox/toolbox.hpp>
+#include <boost/gil/extension/io/tiff_write.hpp>
 #include <boost/gil/extension/io/png_write.hpp>
-#include <boost/gil/extension/toolbox/image_types/indexed_image.hpp>
 namespace fs = std::experimental::filesystem;
-namespace gil = boost::gil;
+namespace gi = boost::gil;
 
 struct benchmark
 {
@@ -27,15 +29,33 @@ struct benchmark
     }
 };
 
-using dims_t = gil::point2<std::ptrdiff_t>;
+using dims_t = gi::point2<std::ptrdiff_t>;
 using tile_t = std::tuple<std::string, int, int, int, int>;
 using tiles_t = std::vector<tile_t>;
+
+template <typename View>
+void dump_view(std::ostream& os, View const& view)
+{
+    using pixel_t = gi::pixel<typename gi::channel_type<View>::type, gi::layout<typename gi::color_space_type<View>::type>>;
+    std::vector<pixel_t> row_buf(view.width());
+    std::string row_hex(2 * row_buf.size() * sizeof(pixel_t), char{0});
+    for (std::ptrdiff_t y = 0; y < view.height(); ++y)
+    {
+        std::copy(view.row_begin(y), view.row_end(y), row_buf.begin());
+
+        auto beg = reinterpret_cast<unsigned char*>(row_buf.data());
+        auto end = beg + row_buf.size() * sizeof(pixel_t);
+
+        boost::algorithm::hex(beg, end, row_hex.begin());
+        os << row_hex << '\n';
+    }
+}
 
 template <typename PixelType, typename Iterator>
 auto make_interleaved_view(std::size_t width, std::size_t height, Iterator pixels, std::ptrdiff_t rowsize_in_bytes)
 {
     auto it = reinterpret_cast<PixelType*>(pixels);
-    return ::boost::gil::interleaved_view(width, height, it, rowsize_in_bytes);
+    return gi::interleaved_view(width, height, it, rowsize_in_bytes);
 }
 
 auto read_tile_dib(tile_t const& tile)
@@ -63,8 +83,7 @@ auto read_tile_clr(tile_t const& tile)
     auto f = fs::path(std::get<0>(tile));
     f.replace_extension(".clr");
 
-    using rgb = std::tuple<unsigned char, unsigned char, unsigned char>;
-    std::tuple<int, std::array<rgb, 256>> palette;
+    std::tuple<int, std::array<gi::rgb8_pixel_t, 256>> palette;
     if (fs::exists(f))
     {
         std::ifstream ifs{f};
@@ -112,16 +131,17 @@ int main()
         dims_t const tile_dims{std::get<3>(*tiles.begin()), std::get<4>(*tiles.begin())};
         dims_t const mosaic_dims{static_cast<ptrdiff_t>(tile_dims.x * matrix_size), static_cast<ptrdiff_t>(tile_dims.x * matrix_size)};
 
-        gil::gray8_image_t mosaic_img{mosaic_dims};
-        auto mosaic_view = gil::view(mosaic_img);
-        {
-            benchmark bench{"fill mosaic"};
-            gil::fill_pixels(mosaic_view, 255);
-        }
+        gi::rgb8_image_t mosaic_img{mosaic_dims};
+        auto mosaic_view = gi::view(mosaic_img);
+        //{
+        //    benchmark bench{"fill mosaic"};
+        //    gi::rgb8_pixel_t white8(255, 255, 255);
+        //    gi::fill_pixels(mosaic_view, white8);
+        //}
         {
             auto const out = tiles_path / "mosaic-blank.png";
             benchmark bench{"dump " + out.string()};
-            gil::write_view(out.string(), mosaic_view, gil::png_tag());
+            gi::write_view(out.string(), mosaic_view, gi::png_tag());
         }
         {
             benchmark bench{"merge mosaic total"};
@@ -130,41 +150,37 @@ int main()
                 int x, y, w, h;
                 std::tie(std::ignore, x, y, w, h) = t;
 
+                int num_colors;
+                std::array<gi::rgb8_pixel_t, 256> colors;
+                std::tie(num_colors, colors) = read_tile_clr(t);
+                auto palette_view = gi::interleaved_view(colors.size(), 1, (gi::rgb8_image_t::view_t::x_iterator) colors.data(), colors.size() * sizeof(gi::rgb8_pixel_t));
+
                 auto dib = read_tile_dib(t);
-                auto clr = read_tile_clr(t);
-                auto dib_view = make_interleaved_view<gil::gray8_pixel_t>(w, h, &dib[0], w);
+                auto indices_view = gi::interleaved_view(w, h, (gi::gray8_image_t::view_t::x_iterator) dib.data(), w);
+                auto ii_view = view(indices_view, palette_view);
 
-                gil::indexed_image<gil::gray8_pixel_t, gil::rgb8_pixel_t> img{w, h, 256};
-                gil::copy_and_convert_pixels(dib_view, gil::view(img));
-                auto colors = img.get_palette_view();
-                auto const& rgb = std::get<1>(clr);
-                for (auto it = colors.begin(); it != colors.end(); ++it)
-                {
-                    static uint8_t i = 0;
-                    auto p = gil::rgb8_pixel_t(std::get<0>(rgb[i]), std::get<1>(rgb[i]), std::get<2>(rgb[i]));
-                    i++;
-                    *it = p;
-                }
-                auto tile_view = gil::view(img);
-
-                // TODO
+                gi::rgb8_image_t img(ii_view.dimensions());
+                auto tile_view = view(img);
+                gi::copy_pixels(ii_view, view(img));
                 //{
-                //    auto out = std::get<0>(t) + ".png";
+                //    auto const out = std::get<0>(t) + ".dump";
                 //    benchmark bench1{"dump " + out};
-                //    gil::write_view(out, gil::color_converted_view<gil::rgb8_pixel_t>(tile_view) , gil::png_tag());
+                //    std::ofstream ofs(out);
+                //    dump_view(ofs, tile_view);
                 //}
-                //{
-                //    benchmark bench1{"copy" + std::get<0>(t)};
-                //    gil::copy_and_convert_pixels(
-                //        tile_view,
-                //        gil::subimage_view(mosaic_view, x * w, y * h, w, h));
-                //}
+                {
+                    benchmark bench1{"copy " + std::get<0>(t)};
+                    gi::copy_and_convert_pixels(
+                        tile_view,
+                        gi::subimage_view(mosaic_view, x * w, y * h, w, h));
+                }
             }
         }
         {
-            auto const out = tiles_path / "mosaic-tiles.png";
+            auto const out = tiles_path / "mosaic-tiles";
             benchmark bench{"dump " + out.string()};
-            gil::write_view(out.string(), mosaic_view, gil::png_tag());
+            gi::write_view(out.string() + ".png", mosaic_view, gi::png_tag());
+            //gi::write_view(out.string() + ".tif", mosaic_view, gi::tiff_tag());
         }
     }
     catch (std::exception const& e)
