@@ -1,28 +1,19 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(boost-gil-workshop CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(USE_BOOST_STAGE "Use Boost from current source tree and libraries from stage, unless BOOST_ROOT specified." ON)
 option(USE_CONAN "Use Conan to install dependencies" OFF)
 
 #-----------------------------------------------------------------------------
 # Dependency: Boost
-# - look for stage Build
-# - look for default installation location
-# - look for location specified with BOOST_ROOT
 #-----------------------------------------------------------------------------
-if(USE_BOOST_STAGE AND NOT DEFINED BOOST_ROOT AND NOT DEFINED ENV{BOOST_ROOT})
-  get_filename_component(_boost_root ../../ ABSOLUTE)
-  if(EXISTS ${_boost_root}/boost-build.jam)
-    set(BOOST_ROOT ${_boost_root})
-    message(STATUS "Using Boost libraries from stage directory in BOOST_ROOT=${BOOST_ROOT}")
-  endif()
+if(NOT DEFINED BOOST_ROOT AND NOT DEFINED ENV{BOOST_ROOT})
+  message(STATUS "Using Boost libraries from stage directory in BOOST_ROOT=${BOOST_ROOT}")
 endif()
 
-set (BOOST_ROOT "D:/dev/boost/boost")
 set(Boost_DETAILED_FAILURE_MSG ON)
 if(MSVC)
   set(Boost_USE_STATIC_LIBS ON)
@@ -30,6 +21,9 @@ if(MSVC)
 endif()
 find_package(Boost 1.66 REQUIRED)
 
+#-----------------------------------------------------------------------------
+# Dependency: libpng, libjpeg, libtiff via Vcpkg or Conan
+#-----------------------------------------------------------------------------
 if(USE_CONAN)
   # Download automatically, you can also just copy the conan.cmake file
   if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
@@ -54,6 +48,40 @@ else()
   find_package(TIFF REQUIRED)
 endif()
 
+#-----------------------------------------------------------------------------
+# Compiler
+#
+# Follows https://svn.boost.org/trac10/wiki/Guidelines/WarningsGuidelines
+#-----------------------------------------------------------------------------
+if(MSVC)
+  string(REGEX REPLACE "/W3" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  string(REGEX REPLACE "-W3" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  add_compile_options(-W4)
+  add_compile_options(-FC) # We need absolute path in __FILE__
+else()
+  add_compile_options(-pedantic)
+  add_compile_options(-Wall)
+  add_compile_options(-Wextra)
+  add_compile_options(-Wstrict-aliasing)
+  add_compile_options(-fstrict-aliasing)
+  add_compile_options(-Wconversion )
+  add_compile_options(-Wsign-promo)
+  add_compile_options(-Wfloat-equal)
+  add_compile_options(-Wunused-parameter)
+  add_compile_options(-Wshadow)
+endif()
+
+if(MSVC)
+  add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE=1)
+  add_definitions(-D_SCL_SECURE_NO_DEPRECATE=1)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS=1)
+  add_definitions(-D_SCL_SECURE_NO_WARNINGS=1)
+  add_definitions(-DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE=1)
+endif()
+
+#-----------------------------------------------------------------------------
+# Targets
+#-----------------------------------------------------------------------------
 set(gil_samples
   indexed_image_raw
   read_image_pnm
@@ -62,18 +90,6 @@ set(gil_samples
 foreach(sample IN ITEMS ${gil_samples})
   message(STATUS "Building sample: ${sample}")
   add_executable(${sample} ${sample}.cpp)
-  if(MSVC)
-    string(REGEX REPLACE "/W3" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-    target_compile_options(${sample} PRIVATE -W4 -FC) # We need absolute path in __FILE__
-    target_compile_definitions(${sample} PRIVATE _CRT_NONSTDC_NO_DEPRECATE=1)
-    target_compile_definitions(${sample} PRIVATE _SCL_SECURE_NO_DEPRECATE=1)
-    target_compile_definitions(${sample} PRIVATE _CRT_SECURE_NO_WARNINGS=1)
-    target_compile_definitions(${sample} PRIVATE _SCL_SECURE_NO_WARNINGS=1)
-    target_compile_definitions(${sample} PRIVATE BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE=1)
-  else()
-    target_compile_options(${sample} PRIVATE -Wall)
-    target_compile_options(${sample} PRIVATE -pedantic)
-  endif()
 
   # Unfortunately, ALIAS of imported target is not supported
   # see https://github.com/conan-io/conan/issues/2125
