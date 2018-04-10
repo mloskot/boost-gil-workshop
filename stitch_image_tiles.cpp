@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
@@ -9,7 +10,7 @@
 #include <tuple>
 #include <boost/algorithm/hex.hpp>
 #include <boost/gil/gil_all.hpp>
-//#include <boost/gil/extension/toolbox/image_types/indexed_image.hpp>
+#include <boost/gil/extension/toolbox/image_types/indexed_image.hpp>
 #include <boost/gil/extension/toolbox/toolbox.hpp>
 #include <boost/gil/extension/io/tiff_write.hpp>
 #include <boost/gil/extension/io/png_write.hpp>
@@ -102,6 +103,32 @@ auto read_tile_clr(tile_t const& tile)
     return palette;
 }
 
+struct BGRAQUAD
+{
+    unsigned char rgbBlue;
+    unsigned char rgbGreen;
+    unsigned char rgbRed;
+    unsigned char rgbReserved;
+};
+
+struct color_convert_from_rgbquad
+{
+    template <typename DstPixel>
+    void operator()(boost::gil::bgra8_pixel_t const& src, DstPixel& dst) const
+    {
+        assert(get_color(src, boost::gil::alpha_t()) == 0); // RGBQUAD::rgbReserved
+
+        using channel_type = boost::gil::channel_type<boost::gil::bgra8_pixel_t>::type;
+        using src_pixel = boost::gil::pixel<channel_type, boost::gil::bgr_layout_t>;
+        src_pixel const src_bgr(
+            get_color(src, boost::gil::blue_t()),
+            get_color(src, boost::gil::green_t()),
+            get_color(src, boost::gil::red_t()));
+        boost::gil::default_color_converter()(src_bgr, dst);
+    }
+};
+
+
 int main()
 {
     try
@@ -131,18 +158,18 @@ int main()
         dims_t const tile_dims{std::get<3>(*tiles.begin()), std::get<4>(*tiles.begin())};
         dims_t const mosaic_dims{static_cast<ptrdiff_t>(tile_dims.x * matrix_size), static_cast<ptrdiff_t>(tile_dims.x * matrix_size)};
 
-        gi::rgb8_image_t mosaic_img{mosaic_dims};
+        gi::rgba8_image_t mosaic_img{mosaic_dims};
         auto mosaic_view = gi::view(mosaic_img);
-        //{
-        //    benchmark bench{"fill mosaic"};
-        //    gi::rgb8_pixel_t white8(255, 255, 255);
-        //    gi::fill_pixels(mosaic_view, white8);
-        //}
         {
-            auto const out = tiles_path / "mosaic-blank.png";
-            benchmark bench{"dump " + out.string()};
-            gi::write_view(out.string(), mosaic_view, gi::png_tag());
+            benchmark bench{"fill mosaic"};
+            gi::rgba8_image_t::value_type white8(255, 255, 255, 255);
+            gi::fill_pixels(mosaic_view, white8);
         }
+        //{
+        //    auto const out = tiles_path / "mosaic-blank.png";
+        //    benchmark bench{"dump " + out.string()};
+        //    gi::write_view(out.string(), mosaic_view, gi::png_tag());
+        //}
         {
             benchmark bench{"merge mosaic total"};
             for (auto &t : tiles)
@@ -153,15 +180,26 @@ int main()
                 int num_colors;
                 std::array<gi::rgb8_pixel_t, 256> colors;
                 std::tie(num_colors, colors) = read_tile_clr(t);
-                auto palette_view = gi::interleaved_view(colors.size(), 1, (gi::rgb8_image_t::view_t::x_iterator) colors.data(), colors.size() * sizeof(gi::rgb8_pixel_t));
+                using COLORQUAD = BGRAQUAD;
+                COLORQUAD rgb[256] = {0};
+                for (auto i = 0u; i < num_colors; i++)
+                {
+                    auto const& c = colors[i];
+                    rgb[i] = { gi::get_color(c, gi::blue_t()), gi::get_color(c, gi::green_t()), gi::get_color(c, gi::red_t()), 0 };
+                }
+
+                using index_view_x_iterator = gi::gray8_image_t::view_t::x_iterator;
+                using palette_view_x_iterator = gi::bgra8_image_t::view_t::x_iterator;
+
+                auto const nPaletteCount = std::size(rgb);
+                auto palette_view = gi::interleaved_view(nPaletteCount, 1, (palette_view_x_iterator)&rgb[0], nPaletteCount * sizeof(COLORQUAD));
 
                 auto dib = read_tile_dib(t);
-                auto indices_view = gi::interleaved_view(w, h, (gi::gray8_image_t::view_t::x_iterator) dib.data(), w);
-                auto ii_view = view(indices_view, palette_view);
+                auto indices_view = gi::interleaved_view(w, h, (index_view_x_iterator) dib.data(), w);
 
-                gi::rgb8_image_t img(ii_view.dimensions());
-                auto tile_view = view(img);
-                gi::copy_pixels(ii_view, view(img));
+                //gi::rgb8_image_t img(ii_view.dimensions());
+                //auto tile_view = view(img);
+                //gi::copy_pixels(view(indices_view, palette_view), view(img));
                 //{
                 //    auto const out = std::get<0>(t) + ".dump";
                 //    benchmark bench1{"dump " + out};
@@ -169,9 +207,13 @@ int main()
                 //    dump_view(ofs, tile_view);
                 //}
                 {
+                    auto ii_view = view(indices_view, palette_view);
+                    auto cc_view = gi::color_converted_view<boost::gil::rgb8_pixel_t>(
+                        ii_view, color_convert_from_rgbquad());
+
                     benchmark bench1{"copy " + std::get<0>(t)};
                     gi::copy_and_convert_pixels(
-                        tile_view,
+                        cc_view,
                         gi::subimage_view(mosaic_view, x * w, y * h, w, h));
                 }
             }
