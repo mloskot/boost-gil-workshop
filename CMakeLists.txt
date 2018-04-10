@@ -20,6 +20,7 @@ if(MSVC)
   set(Boost_USE_STATIC_RUNTIME OFF)
 endif()
 find_package(Boost 1.66 REQUIRED)
+include_directories(${BOOST_ROOT}/libs/gil/include) # Help CMake-aware IDEs
 
 #-----------------------------------------------------------------------------
 # Dependency: libpng, libjpeg, libtiff via Vcpkg or Conan
@@ -57,7 +58,21 @@ if(MSVC)
   string(REGEX REPLACE "/W3" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
   string(REGEX REPLACE "-W3" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
   add_compile_options(-W4)
+  add_compile_options(-we4288) # For-loop scoping (this is the default)
+  add_compile_options(-we4238) # don't take address of temporaries
+  add_compile_options(-we4239) # don't bind temporaries to non-const references (Stephan's "Evil Extension")
+  add_compile_options(-we4346) # require "typename" where the standard requires it
   add_compile_options(-FC) # We need absolute path in __FILE__
+  add_compile_options(-Zc:forScope) # For loop scoping again (this is the default)
+  add_definitions(-DVC_EXTRALEAN=1)
+  add_definitions(-DWIN32_LEAN_AND_MEAN=1)
+  add_definitions(-DNOMINMAX=1)
+  add_definitions(-DNOGDI=1)
+  add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE=1)
+  add_definitions(-D_SCL_SECURE_NO_DEPRECATE=1)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS=1)
+  add_definitions(-D_SCL_SECURE_NO_WARNINGS=1)
+  add_definitions(-DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE=1)
 else()
   add_compile_options(-pedantic)
   add_compile_options(-Wall)
@@ -71,25 +86,20 @@ else()
   add_compile_options(-Wshadow)
 endif()
 
-if(MSVC)
-  add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE=1)
-  add_definitions(-D_SCL_SECURE_NO_DEPRECATE=1)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS=1)
-  add_definitions(-D_SCL_SECURE_NO_WARNINGS=1)
-  add_definitions(-DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE=1)
-endif()
-
 #-----------------------------------------------------------------------------
 # Targets
 #-----------------------------------------------------------------------------
 set(gil_samples
+  indexed_transparency
   indexed_image_raw
   read_image_pnm
   stitch_image_tiles)
 
+file(GLOB _gil_headers ${BOOST_ROOT}/libs/gil/include/boost/gil/*.hpp)
+
 foreach(sample IN ITEMS ${gil_samples})
   message(STATUS "Building sample: ${sample}")
-  add_executable(${sample} ${sample}.cpp)
+  add_executable(${sample} ${_gil_headers} ${sample}.cpp)
 
   # Unfortunately, ALIAS of imported target is not supported
   # see https://github.com/conan-io/conan/issues/2125
