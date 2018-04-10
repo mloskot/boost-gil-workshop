@@ -1,4 +1,16 @@
-**/.vs*
+*~
+
+# Visual Studio (Code)
+/.vs
+.vscode
+
+# CMake
 /*build*
+/cmake-build-debug/
+/cmake-build-release/
+
+# JetBrains
+/.idea
+
+# Data
 /images/osm/**/*.png
-/CMakeSettings.json
