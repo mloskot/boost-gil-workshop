@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <boost/algorithm/hex.hpp>
-#include <boost/gil/gil_all.hpp>
+#include <boost/gil.hpp>
 #include <boost/gil/extension/toolbox/image_types/indexed_image.hpp>
 using namespace std;
 using namespace boost::gil;

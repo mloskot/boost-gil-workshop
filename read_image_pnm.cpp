@@ -1,6 +1,6 @@
 #include <exception>
 #include <iostream>
-#include <boost/gil/extension/io/pnm_all.hpp>
+#include <boost/gil/extension/io/pnm/read.hpp>
 
 namespace bg = boost::gil;
 

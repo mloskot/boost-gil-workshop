@@ -9,11 +9,10 @@
 #include <string>
 #include <tuple>
 #include <boost/algorithm/hex.hpp>
-#include <boost/gil/gil_all.hpp>
-#include <boost/gil/extension/toolbox/image_types/indexed_image.hpp>
+#include <boost/gil.hpp>
 #include <boost/gil/extension/toolbox/toolbox.hpp>
-#include <boost/gil/extension/io/tiff_write.hpp>
-#include <boost/gil/extension/io/png_write.hpp>
+#include <boost/gil/extension/io/tiff/write.hpp>
+#include <boost/gil/extension/io/png/write.hpp>
 namespace fs = std::experimental::filesystem;
 namespace gi = boost::gil;
 
