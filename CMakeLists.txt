@@ -10,8 +10,19 @@ option(USE_CONAN "Use Conan to install dependencies" OFF)
 #-----------------------------------------------------------------------------
 # Dependency: Boost
 #-----------------------------------------------------------------------------
-if(NOT DEFINED BOOST_ROOT AND NOT DEFINED ENV{BOOST_ROOT})
+if(DEFINED BOOST_ROOT OR DEFINED ENV{BOOST_ROOT})
   message(STATUS "Using Boost libraries from stage directory in BOOST_ROOT=${BOOST_ROOT}")
+endif()
+
+# Latest FindBoost.cmake has likely been updated to detect Boost version not yet released
+if (CMAKE_VERSION VERSION_LESS 3.11)
+  if (NOT EXISTS "${CMAKE_BINARY_DIR}/cmake/FindBoost.cmake")
+    message(STATUS "Downloading FindBoost.cmake from https://gitlab.kitware.com/cmake/ release branch")
+    file(DOWNLOAD
+      "https://gitlab.kitware.com/cmake/cmake/raw/release/Modules/FindBoost.cmake"
+      "${CMAKE_BINARY_DIR}/cmake/FindBoost.cmake")
+  endif()
+  list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_BINARY_DIR}/cmake)
 endif()
 
 set(Boost_DETAILED_FAILURE_MSG ON)
@@ -19,8 +30,8 @@ if(MSVC)
   set(Boost_USE_STATIC_LIBS ON)
   set(Boost_USE_STATIC_RUNTIME OFF)
 endif()
-find_package(Boost 1.66 REQUIRED)
-include_directories(${BOOST_ROOT}/libs/gil/include) # Help CMake-aware IDEs
+find_package(Boost 1.67 REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS}) # Help CMake-aware IDEs
 
 #-----------------------------------------------------------------------------
 # Dependency: libpng, libjpeg, libtiff via Vcpkg or Conan
