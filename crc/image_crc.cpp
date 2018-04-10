@@ -147,6 +147,8 @@ void image_test::run()
     image_all_test<bgr121_image_t>("bgr121_");
 }
 
+auto pause = []() { std::string s; std::cin >> s; };
+
 int main(int argc, char* argv[])
 {
     try
@@ -158,7 +160,8 @@ int main(int argc, char* argv[])
             image_test test(ofs);
             test.run();
         }
-        std::cin >> std::string{};
+
+        pause();
         return EXIT_SUCCESS;
     }
     catch (std::runtime_error const& e)
@@ -169,6 +172,7 @@ int main(int argc, char* argv[])
     {
         std::cerr << "unknown error" << std::endl;
     }
-    std::cin >> std::string{};
+
+    pause();
     return EXIT_FAILURE;
 }
