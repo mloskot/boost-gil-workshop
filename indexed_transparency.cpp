@@ -61,12 +61,11 @@ int main()
 
         gil::rgba8_image_t dst_img(w, h);
 
-        auto src_rgba_view = gil::color_converted_view<gil::rgba8_pixel_t>(src_view, color_convert_from_indexed_transparency(palette[3]));
+        auto src_rgba_view = gil::color_converted_view<gil::rgba8_pixel_t>(src_view,
+            color_convert_from_indexed_transparency(palette[3]));
         gil::copy_and_convert_pixels(src_rgba_view, gil::view(dst_img));
         gil::write_view("dst1.png", gil::view(dst_img), gil::png_tag());
     }
-
-
 
     return 0;
 }

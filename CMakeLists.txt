@@ -10,12 +10,8 @@ option(USE_CONAN "Use Conan to install dependencies" OFF)
 #-----------------------------------------------------------------------------
 # Dependency: Boost
 #-----------------------------------------------------------------------------
-if(DEFINED BOOST_ROOT OR DEFINED ENV{BOOST_ROOT})
-  message(STATUS "Using Boost libraries from stage directory in BOOST_ROOT=${BOOST_ROOT}")
-endif()
-
-# Latest FindBoost.cmake has likely been updated to detect Boost version not yet released
 if (CMAKE_VERSION VERSION_LESS 3.11)
+  # Latest FindBoost.cmake has likely been updated to detect Boost version not yet released
   if (NOT EXISTS "${CMAKE_BINARY_DIR}/cmake/FindBoost.cmake")
     message(STATUS "Downloading FindBoost.cmake from https://gitlab.kitware.com/cmake/ release branch")
     file(DOWNLOAD
@@ -23,6 +19,10 @@ if (CMAKE_VERSION VERSION_LESS 3.11)
       "${CMAKE_BINARY_DIR}/cmake/FindBoost.cmake")
   endif()
   list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_BINARY_DIR}/cmake)
+endif()
+
+if(DEFINED BOOST_ROOT OR DEFINED ENV{BOOST_ROOT})
+  message(STATUS "Using Boost libraries from stage directory in BOOST_ROOT=${BOOST_ROOT}")
 endif()
 
 set(Boost_DETAILED_FAILURE_MSG ON)
