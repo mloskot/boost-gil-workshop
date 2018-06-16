@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.11)
 project(boost-gil-workshop CXX)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -101,6 +101,8 @@ endif()
 # Targets
 #-----------------------------------------------------------------------------
 set(gil_samples
+  channel_invert_bug
+  cie
   indexed_transparency
   indexed_image_raw
   read_image_pnm
@@ -133,5 +135,11 @@ foreach(sample IN ITEMS ${gil_samples})
       target_include_directories(${sample} PRIVATE ${JPEG_INCLUDE_DIR})
   endif()
 endforeach()
+
+add_executable(test_promote_integral test_promote_integral.cpp)
+target_link_libraries(gil_integer_selectors
+        PRIVATE
+        Boost::disable_autolinking
+        Boost::unit_test_framework)
 
 add_subdirectory(crc)
