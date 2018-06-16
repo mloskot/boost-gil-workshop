@@ -21,7 +21,7 @@
       "ctestCommandArgs": "",
       "variables": [
         { "name": "USE_CONAN", "value": "ON" },
-        { "name": "BOOST_ROOT", "value": "D:/dev/boost.win" }
+        { "name": "BOOST_ROOT", "value": "D:/boost.win" }
       ]
     },
     {
@@ -55,7 +55,7 @@
         },
         {
           "name": "BOOST_ROOT",
-          "value": "D:/dev/boost.win"
+          "value": "D:/boost.win"
         }
       ]
     },

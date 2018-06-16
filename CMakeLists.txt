@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.11)
 project(boost-gil-workshop CXX)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -10,12 +10,8 @@ option(USE_CONAN "Use Conan to install dependencies" OFF)
 #-----------------------------------------------------------------------------
 # Dependency: Boost
 #-----------------------------------------------------------------------------
-if(DEFINED BOOST_ROOT OR DEFINED ENV{BOOST_ROOT})
-  message(STATUS "Using Boost libraries from stage directory in BOOST_ROOT=${BOOST_ROOT}")
-endif()
-
-# Latest FindBoost.cmake has likely been updated to detect Boost version not yet released
 if (CMAKE_VERSION VERSION_LESS 3.11)
+  # Latest FindBoost.cmake has likely been updated to detect Boost version not yet released
   if (NOT EXISTS "${CMAKE_BINARY_DIR}/cmake/FindBoost.cmake")
     message(STATUS "Downloading FindBoost.cmake from https://gitlab.kitware.com/cmake/ release branch")
     file(DOWNLOAD
@@ -23,6 +19,10 @@ if (CMAKE_VERSION VERSION_LESS 3.11)
       "${CMAKE_BINARY_DIR}/cmake/FindBoost.cmake")
   endif()
   list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_BINARY_DIR}/cmake)
+endif()
+
+if(DEFINED BOOST_ROOT OR DEFINED ENV{BOOST_ROOT})
+  message(STATUS "Using Boost libraries from stage directory in BOOST_ROOT=${BOOST_ROOT}")
 endif()
 
 set(Boost_DETAILED_FAILURE_MSG ON)
@@ -101,6 +101,8 @@ endif()
 # Targets
 #-----------------------------------------------------------------------------
 set(gil_samples
+  channel_invert_bug
+  cie
   indexed_transparency
   indexed_image_raw
   read_image_pnm
@@ -133,5 +135,11 @@ foreach(sample IN ITEMS ${gil_samples})
       target_include_directories(${sample} PRIVATE ${JPEG_INCLUDE_DIR})
   endif()
 endforeach()
+
+add_executable(test_promote_integral test_promote_integral.cpp)
+target_link_libraries(gil_integer_selectors
+        PRIVATE
+        Boost::disable_autolinking
+        Boost::unit_test_framework)
 
 add_subdirectory(crc)

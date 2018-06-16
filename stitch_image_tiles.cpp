@@ -190,6 +190,11 @@ int main()
                 using index_view_x_iterator = gi::gray8_image_t::view_t::x_iterator;
                 using palette_view_x_iterator = gi::bgra8_image_t::view_t::x_iterator;
 
+                // COLORQUAD rgb[256] = {0}
+                assert(std::all_of(std::begin(rgb), std::end(rgb), [](auto const& c) -> bool {
+                    return c.rgbRed == 0 && c.rgbGreen == 0 && c..rgbBlue == 0 && c.rgbReserved == 0;
+                }));
+
                 auto const nPaletteCount = std::size(rgb);
                 auto palette_view = gi::interleaved_view(nPaletteCount, 1, (palette_view_x_iterator)&rgb[0], nPaletteCount * sizeof(COLORQUAD));
 
