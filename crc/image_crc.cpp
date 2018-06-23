@@ -5,7 +5,10 @@
 #include <string>
 #include <ios>
 #include <iostream>
+#define HAS_NO_FILESYSTEM
+#ifndef HAS_NO_FILESYSTEM
 #include <filesystem>
+#endif
 #include <fstream>
 #include <string>
 #include <vector>
@@ -17,7 +20,9 @@
 using namespace std;
 using namespace boost;
 using namespace boost::gil;
+#ifndef HAS_NO_FILESYSTEM
 namespace fs = std::experimental::filesystem;
+#endif
 
 //#define ENABLE_SAMPLE_VIEW_TESTS
 #ifdef ENABLE_SAMPLE_VIEW_TESTS
@@ -147,21 +152,32 @@ void image_test::run()
     image_all_test<bgr121_image_t>("bgr121_");
 }
 
+#ifdef _MSC_VER
 auto pause = []() { std::string s; std::cin >> s; };
+#define PAUSE_ME pause()
+#else
+#define PAUSE_ME (void)0
+#endif
 
 int main(int argc, char* argv[])
 {
     try
     {
+        std::ostream* pos;
+#ifndef HAS_NO_FILESYSTEM
         auto const this_path = fs::canonical(fs::path(__FILE__).parent_path());
         auto const log_path = this_path / fs::path("last.log");
+        std::ofstream ofs(log_path);
+        pos = &ofs;
+#else
+        pos = &std::cout;
+#endif
         {
-            std::ofstream ofs(log_path);
-            image_test test(ofs);
+            image_test test(*pos);
             test.run();
         }
 
-        pause();
+        PAUSE_ME;
         return EXIT_SUCCESS;
     }
     catch (std::runtime_error const& e)
@@ -173,6 +189,6 @@ int main(int argc, char* argv[])
         std::cerr << "unknown error" << std::endl;
     }
 
-    pause();
+    PAUSE_ME;
     return EXIT_FAILURE;
 }

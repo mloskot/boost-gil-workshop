@@ -1,7 +1,9 @@
 set(gil_crc_samples
-  image_crc)
+  image_crc
+  minimal_chhenning)
 
 add_executable(image_crc image_crc.cpp sample_image.cpp)
+add_executable(minimal_chhenning minimal_chhenning.cpp)
 
 foreach(sample IN ITEMS ${gil_crc_samples})
   message(STATUS "Building sample: ${sample}")

@@ -1,8 +1,8 @@
 // https://github.com/boostorg/gil/issues/49#issuecomment-377725324
 #include <boost/gil/gil_all.hpp>
-//#define SAVE_BMP
+#define SAVE_BMP
 #ifdef SAVE_BMP
-#include <boost/gil/extension/io/bmp_all.hpp>
+#include <boost/gil/extension/io/bmp.hpp>
 #endif
 using namespace boost::gil;
 
