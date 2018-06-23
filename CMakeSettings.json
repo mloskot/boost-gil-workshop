@@ -21,7 +21,7 @@
       "ctestCommandArgs": "",
       "variables": [
         { "name": "USE_CONAN", "value": "ON" },
-        { "name": "BOOST_ROOT", "value": "D:/boost.win" }
+        { "name": "BOOST_ROOT", "value": "D:/boost.wsl" }
       ]
     },
     {
@@ -35,7 +35,8 @@
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
       "variables": [
-        { "name": "USE_CONAN", "value": "ON" }
+        { "name": "USE_CONAN", "value": "ON" },
+        { "name": "BOOST_ROOT", "value": "D:/boost.wsl" }
       ]
     },
     {
@@ -55,7 +56,7 @@
         },
         {
           "name": "BOOST_ROOT",
-          "value": "D:/boost.win"
+          "value": "D:/boost.wsl"
         }
       ]
     },
