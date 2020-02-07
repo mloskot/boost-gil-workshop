@@ -1,0 +1,12 @@
+/io/output
+
+### CMake
+/*build*
+
+### Visual Studio
+/.vs
+# Ignore user's modifications to the CMake settings file
+/CMakeSettings.json
+
+### Visual Studio Code
+/.vscode
