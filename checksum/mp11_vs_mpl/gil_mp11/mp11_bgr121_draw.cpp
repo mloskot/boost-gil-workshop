@@ -64,11 +64,14 @@ int main()
         while (loc.x() >= img_view.x_at(0, 0))
         {
             *loc = green;
-            loc -= typename bgr121_view_t::point_t(3, 3);
+            // BUG:
+            // for image 20,20
+            // step 1,1 or 3,3 or 5,5 break in MSVC 64-bit release vs debug
+            // step 2,2 or 4,4 or 6,6 give consistent results
+            loc -= typename bgr121_view_t::point_t(6, 6);
         }
         auto d4 = dump(img_view);
         save(d4, "draw_d4");
-
 
         return 0;
     }
