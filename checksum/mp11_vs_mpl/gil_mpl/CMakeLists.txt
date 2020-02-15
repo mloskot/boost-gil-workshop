@@ -1,10 +1,3 @@
-cmake_minimum_required(VERSION 3.10)
-project(gil_mpl
-  LANGUAGES CXX
-  DESCRIPTION "Test Boost.GIL version based on Boost.MPL")
-
-set(_gil_include "D:\\boost.win.original")
-
 foreach(_cpp
     mpl_bgr121_checksum.cpp
     mpl_bgr121_pixel.cpp)
