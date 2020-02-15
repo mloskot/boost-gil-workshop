@@ -1,11 +1,11 @@
 *~
 
 # Visual Studio (Code)
-/.vs
+.vs
 .vscode
 
 # CMake
-/*build*
+*build*
 /cmake-build-debug/
 /cmake-build-release/
 
