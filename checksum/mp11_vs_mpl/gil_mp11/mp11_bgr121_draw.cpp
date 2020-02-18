@@ -62,17 +62,24 @@ void run1(std::ptrdiff_t w, std::ptrdiff_t h, std::ptrdiff_t step)
     save_dump(view(img), "draw_d3_" + name);
 
     // draw a green dotted line along the main diagonal with step of 3
-    loc = img_view.xy_at(img_view.width() - 1, img_view.height() - 1);
-    while (loc.x() >= img_view.x_at(0, 0))
+    //
     {
-        *loc = green;
-        // BUG:
-        // for image 20,20
-        // step 1,1 or 3,3 or 5,5 break in MSVC 64-bit release vs debug
-        // step 2,2 or 4,4 or 6,6 give consistent results
-        loc -= typename bgr121_view_t::point_t(step, step);
+        // EUREKA!
+        // Re-using loc leaks the bug
+        loc = img_view.xy_at(img_view.width() - 1, img_view.height() - 1);
+        // Defining loc fixes the bug
+        //typename bgr121_view_t::xy_locator loc = img_view.xy_at(img_view.width() - 1, img_view.height() - 1);
+        while (loc.x() >= img_view.x_at(0, 0))
+        {
+            *loc = green;
+            // BUG:
+            // for image 20,20
+            // step 1,1 or 3,3 or 5,5 break in MSVC 64-bit release vs debug
+            // step 2,2 or 4,4 or 6,6 give consistent results
+            loc -= typename bgr121_view_t::point_t(step, step);
+        }
+        save_dump(view(img), "draw_d4_" + name);
     }
-    save_dump(view(img), "draw_d4_" + name);
 }
 
 void run2(std::ptrdiff_t w, std::ptrdiff_t h, std::ptrdiff_t step)
