@@ -3,72 +3,61 @@
 #include <exception>
 #include <iostream>
 #include "../utility.hpp"
-#include "../bgr121.hpp"
 namespace gil = boost::gil;
 
-void run(std::ptrdiff_t w, std::ptrdiff_t h, std::ptrdiff_t step)
+using bgr121_ref_t = gil::bit_aligned_pixel_reference<
+    std::uint8_t,
+    boost::mp11::mp_list_c<int, 1, 2, 1>,
+    gil::bgr_layout_t,
+    true
+> const;
+
+using bgr121_image_t = gil::image<bgr121_ref_t, false>;
+using bgr121_view_t = typename bgr121_image_t::view_t;
+using bgr121_value_t = typename bgr121_view_t::value_type;
+
+void test(std::ptrdiff_t w, std::ptrdiff_t h)
 {
-    initialize();
-    std::string const name = "stage1_" + std::to_string(w) + "x" + std::to_string(h) + "s" + std::to_string(step);
+    std::string const name = "stage0_" + std::to_string(w) + "x" + std::to_string(h);
 
-    bgr121_image_t img(typename bgr121_view_t::point_t(w, h));
-    bgr121_view_t const& img_view = view(img);
-    //save_dump(view(img), name + "_dump0"); // uninitialized noise
+    gil::rgb8_pixel_t red8(255, 0, 0), blue8(0, 0, 255);
+    bgr121_value_t red(0), blue(0);
+    gil::color_convert(red8, red);
+    gil::color_convert(blue8, blue);
 
-    fill(img_view.begin(), img_view.end(), red);
-    //save_dump(view(img), name + "_dump1");
-
-    gil::color_convert(red8, img_view[0]);
-    //save_dump(view(img), name + "_dump2");
-
-        // draw a blue line along the diagonal
-    typename bgr121_view_t::xy_locator loc = img_view.xy_at(0, img_view.height() - 1);
-    for (int y = 0; y < img_view.height(); ++y)
+    bgr121_image_t img(w, h);
     {
-        *loc = blue;
-        ++loc.x();
-        loc.y()--;
+        auto v = view(img);
+        fill(v.begin(), v.end(), red);
+        save_dump(view(img), name + "_dump1");
     }
-    //save_dump(view(img), name + "_dump3");
-
-    // draw a green dotted line along the main diagonal with step of 3
     {
-        // FIX!
-        // Re-using loc declared above leaks the bug
-        // Defining loc fixes the bug
-        typename bgr121_view_t::xy_locator loc = img_view.xy_at(img_view.width() - 1, img_view.height() - 1);
-        while (loc.x() >= img_view.x_at(0, 0))
+        // draw a blue line along the diagonal
+        auto const h = view(img).height();
+        auto loc = view(img).xy_at(0, h - 1);
+        for (std::ptrdiff_t y = 0; y < h; ++y)
         {
-            *loc = green;
-            // give consistent results all the time
-            loc -= typename bgr121_view_t::point_t(step, step);
+            *loc = blue;
+            ++loc.x();
+            --loc.y();
         }
-        save_dump(view(img), name + "_dump4");
+        save_dump(view(img), name + "_dump2");
     }
 }
-
-//#define DUMP_MINIMAL
 int main()
 {
     try
     {
-#ifdef DUMP_MINIMAL
-        run(20, 20, 2);
-        run(20, 20, 3);
-#else
-        for (auto d : {10, 20})
-        {
-            for (auto s : {1, 2, 3, 4, 5, 6, 10})
-                run(d, d, s);
-        }
-#endif
+        test(3, 3);
+        test(10, 10);
+        test(20, 20);
 
-        return 0;
+        return EXIT_SUCCESS;
     }
     catch (std::exception const& e)
     {
         std::cerr << e.what() << std::endl;
 
     }
-    return 0;
+    return EXIT_FAILURE;
 }

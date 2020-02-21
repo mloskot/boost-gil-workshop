@@ -5,7 +5,12 @@ set(CMAKE_CXX_STANDARD 17)
 
 if(MSVC)
   set(_gil_include "D:\\boost.win")
+else()
+set(_gil_include "/mnt/d/boost.win")
 endif()
 
+#add_definitions(-DUSE_GLOBAL_COLORS)
+add_definitions(-DDUMP_MINIMAL)
 add_subdirectory(stage0)
 add_subdirectory(stage1)
+add_subdirectory(stage2)

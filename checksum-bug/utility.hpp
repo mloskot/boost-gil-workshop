@@ -8,6 +8,8 @@
 #include <tuple>
 #include <vector>
 namespace fs = std::filesystem;
+namespace gil = boost::gil;
+
 #ifdef NDEBUG
 std::string file_suffix = "_r";
 #else
@@ -21,7 +23,7 @@ auto checksum(View const& img_view) -> std::string
     {
         gil::rgb8_image_t rgb_img(img_view.dimensions());
         gil::copy_and_convert_pixels(img_view, gil::view(rgb_img));
-        auto rgb_view = const_view(rgb_img);
+        auto rgb_view = gil::view(rgb_img);
         crc.process_bytes(rgb_view.row_begin(0), rgb_view.size() * 3);
     }
     std::ostringstream oss;
