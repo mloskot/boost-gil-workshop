@@ -49,9 +49,14 @@ auto dump(View const& view) -> std::tuple<std::string, std::vector<std::tuple<in
 
 void save(std::tuple<std::string, std::vector<std::tuple<int, int, int>>> const& d, std::string f)
 {
+#ifdef MSVC
     fs::path dir_name = fs::current_path().stem();
     fs::path dir_path = fs::current_path().parent_path().parent_path().parent_path() / dir_name;
+#else
+    fs::path dir_path = fs::current_path();
+#endif
     auto out_path  = dir_path / (f + file_suffix + ".txt");
+    std::cout << out_path.string() << std::endl;
     std::ofstream ofs(out_path);
 
     auto& [c, v] = d;
