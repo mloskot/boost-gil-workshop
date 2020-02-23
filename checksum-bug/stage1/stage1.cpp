@@ -16,41 +16,77 @@ using bgr121_image_t = gil::image<bgr121_ref_t, false>;
 using bgr121_view_t = typename bgr121_image_t::view_t;
 using bgr121_value_t = typename bgr121_view_t::value_type;
 
-void test(std::ptrdiff_t w, std::ptrdiff_t h)
-{
-    std::string const name = "stage0_" + std::to_string(w) + "x" + std::to_string(h);
+gil::rgb8_pixel_t red8(255, 0, 0), blue8(0, 0, 255);
+bgr121_value_t red(0), blue(0);
 
-    gil::rgb8_pixel_t red8(255, 0, 0), blue8(0, 0, 255);
-    bgr121_value_t red(0), blue(0);
+template <typename View>
+void save_dump(View const& v, std::string name)
+{
+    auto const f = "stage1_" + name + "_" + std::to_string(v.width()) + "x" + std::to_string(v.height());
+    save(dump(v), fs::path(__FILE__).parent_path(), f);
+}
+
+void init()
+{
     gil::color_convert(red8, red);
     gil::color_convert(blue8, blue);
+}
 
+void draw_loop(std::ptrdiff_t w, std::ptrdiff_t h)
+{
+    init();
     bgr121_image_t img(w, h);
     {
         auto v = view(img);
         fill(v.begin(), v.end(), red);
-        save_dump(view(img), name + "_dump1");
+        save_dump(view(img), "dump1");
     }
+    // draw a blue line along the diagonal
     {
-        // draw a blue line along the diagonal
-        auto const h = view(img).height();
-        auto loc = view(img).xy_at(0, h - 1);
-        for (std::ptrdiff_t y = 0; y < h; ++y)
+        auto v = view(img);
+        auto loc = v.xy_at(0, v.height() - 1);
+        for (std::ptrdiff_t y = 0; y < v.height(); ++y)
         {
             *loc = blue;
             ++loc.x();
             --loc.y();
         }
-        save_dump(view(img), name + "_dump2");
+        save_dump(view(img), "dump2_loop");
     }
 }
+
+void draw_step(std::ptrdiff_t w, std::ptrdiff_t h)
+{
+    init();
+    bgr121_image_t img(w, h);
+    {
+        auto v = view(img);
+        fill(v.begin(), v.end(), red);
+        save_dump(view(img), "dump1");
+    }
+    // draw a blue line along the diagonal
+    {
+        auto v = view(img);
+        auto loc = v.xy_at(0, v.height() - 1);
+        *loc = blue; // red red blue
+        ++loc.x();
+        --loc.y();
+        *loc = blue; // red blue red
+        ++loc.x();
+        --loc.y();
+        *loc = blue; // blue red red
+        ++loc.x();
+        --loc.y();
+        save_dump(view(img), "dump2_step");
+    }
+}
+
 int main()
 {
     try
     {
-        test(3, 3);
-        test(10, 10);
-        test(20, 20);
+        draw_loop(3, 3);
+        draw_step(3, 3);
 
         return EXIT_SUCCESS;
     }
